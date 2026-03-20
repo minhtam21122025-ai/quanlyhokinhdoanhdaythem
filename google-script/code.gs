@@ -1,15 +1,8 @@
 /**
  * Google Apps Script for Hoàng Gia Education System
- * 
- * Instructions:
- * 1. Open a Google Sheet.
- * 2. Go to Extensions > Apps Script.
- * 3. Paste this code into the editor.
- * 4. Click "Deploy" > "New Deployment".
- * 5. Select type "Web App".
- * 6. Set "Execute as" to "Me".
- * 7. Set "Who has access" to "Anyone".
- * 8. Copy the Web App URL and paste it into the "Google Script URL" field in the app configuration.
+ * * HƯỚNG DẪN COPY:
+ * Xóa trắng toàn bộ code trong file Code.gs cũ của bạn, sau đó dán toàn bộ đoạn code này vào.
+ * Cuối cùng nhấn nút "Deploy" -> "New Deployment" để tạo bản cập nhật mới nhất.
  */
 
 const SPREADSHEET_ID = "1fPhe6RHb7Y4USs4dyv7NJUZqRQulq__Y7Edgcr_69CI";
@@ -25,7 +18,7 @@ function getSS() {
 function doGet(e) {
   var ss = getSS();
 
-  // Handle Login Action
+  // Xử lý luồng đăng nhập
   if (e.parameter.action === "login") {
     var username = e.parameter.username;
     var password = e.parameter.password;
@@ -58,29 +51,32 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  // Xử lý luồng lấy toàn bộ dữ liệu ứng dụng
   var result = {
     subjects: [],
     program: {},
     accounts: []
   };
   
-  // 1. Read Subjects (Sheet 1)
+  // 1. Đọc Danh_muc_mon
   var subjectSheet = ss.getSheetByName("Danh_muc_mon") || ss.getSheets()[0];
-  var subjectData = subjectSheet.getDataRange().getValues();
-  for (var i = 1; i < subjectData.length; i++) {
-    var grade = subjectData[i][0];
-    var subject = subjectData[i][1];
-    var subSubject = subjectData[i][2];
-    if (grade && subject) {
-      result.subjects.push({
-        grade: grade.toString(),
-        subject: subject.toString(),
-        subSubject: (subSubject || "").toString()
-      });
+  if (subjectSheet) {
+    var subjectData = subjectSheet.getDataRange().getValues();
+    for (var i = 1; i < subjectData.length; i++) {
+      var grade = subjectData[i][0];
+      var subject = subjectData[i][1];
+      var subSubject = subjectData[i][2];
+      if (grade && subject) {
+        result.subjects.push({
+          grade: grade.toString(),
+          subject: subject.toString(),
+          subSubject: (subSubject || "").toString()
+        });
+      }
     }
   }
   
-  // 2. Read PPCT sheets (Grade 6 to 9)
+  // 2. Đọc các sheet PPCT (Khối 6 đến 9)
   var ppctSheets = ["PPCT_6", "PPCT_7", "PPCT_8", "PPCT_9"];
   ppctSheets.forEach(function(sheetName) {
     var sheet = ss.getSheetByName(sheetName);
@@ -101,23 +97,23 @@ function doGet(e) {
     }
   });
 
-  // 3. Read Accounts
-  var accountSheet = ss.getSheetByName("Accounts");
-  if (accountSheet) {
-    var accountData = accountSheet.getDataRange().getValues();
-    var headers = accountData[0].map(function(h) { return h.toString().toLowerCase(); });
-    for (var i = 1; i < accountData.length; i++) {
-      var row = accountData[i];
-      var acc = { id: i.toString(), index: i };
-      headers.forEach(function(h, j) {
-        var val = row[j];
-        if (h.includes("tài khoản") || h.includes("username")) acc.username = val ? val.toString() : "";
-        if (h.includes("mật khẩu") || h.includes("password")) acc.password = val ? val.toString() : "";
-        if (h.includes("quyền") || h.includes("role")) acc.role = val ? val.toString() : "";
-        if (h.includes("thời hạn") || h.includes("expiry")) acc.expiry = val ? val.toString() : "";
-        if (h.includes("số máy") || h.includes("devices")) acc.maxDevices = parseInt(val) || 1;
+  // 3. Đọc Accounts
+  var accountSheet2 = ss.getSheetByName("Accounts");
+  if (accountSheet2) {
+    var accountData2 = accountSheet2.getDataRange().getValues();
+    var headers2 = accountData2[0].map(function(h) { return h.toString().toLowerCase(); });
+    for (var k = 1; k < accountData2.length; k++) {
+      var row2 = accountData2[k];
+      var acc2 = { id: k.toString(), index: k };
+      headers2.forEach(function(h, j) {
+        var val = row2[j];
+        if (h.includes("tài khoản") || h.includes("username")) acc2.username = val ? val.toString() : "";
+        if (h.includes("mật khẩu") || h.includes("password")) acc2.password = val ? val.toString() : "";
+        if (h.includes("quyền") || h.includes("role")) acc2.role = val ? val.toString() : "";
+        if (h.includes("thời hạn") || h.includes("expiry")) acc2.expiry = val ? val.toString() : "";
+        if (h.includes("số máy") || h.includes("devices")) acc2.maxDevices = parseInt(val) || 1;
       });
-      if (acc.username) result.accounts.push(acc);
+      if (acc2.username) result.accounts.push(acc2);
     }
   }
   
@@ -130,73 +126,84 @@ function doPost(e) {
     var contents = JSON.parse(e.postData.contents);
     var ss = getSS();
     
-    // 1. Update Subjects
-    var subjectSheet = ss.getSheetByName("Danh_muc_mon");
-    if (!subjectSheet) {
-      subjectSheet = ss.insertSheet("Danh_muc_mon");
-    }
-    subjectSheet.clear();
-    subjectSheet.appendRow(["Khối", "Môn", "Phân môn"]);
-    if (contents.subjects && contents.subjects.length > 0) {
-      var subjectRows = contents.subjects.map(function(s) {
-        return [s.grade, s.subject, s.subSubject];
-      });
-      subjectSheet.getRange(2, 1, subjectRows.length, 3).setValues(subjectRows);
+    // ----------------------------------------------------------------
+    // 1. CẬP NHẬT DANH MỤC MÔN (Chỉ xóa/ghi khi payload có 'subjects')
+    // ----------------------------------------------------------------
+    if (contents.subjects !== undefined) {
+      var subjectSheet = ss.getSheetByName("Danh_muc_mon");
+      if (!subjectSheet) {
+        subjectSheet = ss.insertSheet("Danh_muc_mon");
+      }
+      subjectSheet.clear(); 
+      subjectSheet.appendRow(["Khối", "Môn", "Phân môn"]);
+      
+      if (contents.subjects.length > 0) {
+        var subjectRows = contents.subjects.map(function(s) {
+          return [s.grade, s.subject, s.subSubject];
+        });
+        subjectSheet.getRange(2, 1, subjectRows.length, 3).setValues(subjectRows);
+      }
     }
     
-    // 2. Update PPCT sheets
-    var ppctData = contents.program || {};
-    var gradeData = { "6": [], "7": [], "8": [], "9": [] };
-    
-    for (var key in ppctData) {
-      var parts = key.split("-");
-      if (parts.length >= 4) {
-        var grade = parts[0];
-        if (gradeData[grade]) {
-          gradeData[grade].push([parts[1], parts[2], parts[3], ppctData[key]]);
+    // ----------------------------------------------------------------
+    // 2. CẬP NHẬT PPCT (Chỉ xóa/ghi đúng các sheet khối được gửi lên)
+    // ----------------------------------------------------------------
+    if (contents.program !== undefined) {
+      var ppctData = contents.program;
+      
+      var targetGrades = contents.targetGrades || [];
+      
+      // Tự động tìm khối nào đang được gửi lên nếu frontend không cung cấp targetGrades
+      if (targetGrades.length === 0) {
+         var gradesSet = {};
+         for (var key in ppctData) {
+           var grade = key.split("-")[0];
+           if (grade) gradesSet[grade] = true;
+         }
+         targetGrades = Object.keys(gradesSet);
+      }
+      
+      var gradeData = {};
+      targetGrades.forEach(function(g) { gradeData[g] = []; });
+      
+      for (var keyData in ppctData) {
+        var parts = keyData.split("-");
+        if (parts.length >= 4) {
+          var g = parts[0];
+          if (gradeData[g] !== undefined) {
+            gradeData[g].push([parts[1], parts[2], parts[3], ppctData[keyData]]);
+          }
+        }
+      }
+      
+      // Chỉ loop qua những sheet nằm trong danh sách cần update (targetGrades)
+      for (var idx = 0; idx < targetGrades.length; idx++) {
+        var targetG = targetGrades[idx];
+        var sheetName = "PPCT_" + targetG;
+        var sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+          sheet = ss.insertSheet(sheetName);
+        }
+        
+        sheet.clear();
+        sheet.appendRow(["Môn", "Phân môn", "Tiết", "Nội dung"]);
+        
+        if (gradeData[targetG].length > 0) {
+          gradeData[targetG].sort(function(a, b) {
+            if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+            return parseInt(a[2]) - parseInt(b[2]);
+          });
+          
+          sheet.getRange(2, 1, gradeData[targetG].length, 4).setValues(gradeData[targetG]);
         }
       }
     }
     
-    for (var grade in gradeData) {
-      var sheetName = "PPCT_" + grade;
-      var sheet = ss.getSheetByName(sheetName);
-      if (!sheet) {
-        sheet = ss.insertSheet(sheetName);
-      }
-      sheet.clear();
-      sheet.appendRow(["Môn", "Phân môn", "Tiết", "Nội dung"]);
-      if (gradeData[grade].length > 0) {
-        // Sort by subject then period
-        gradeData[grade].sort(function(a, b) {
-          if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
-          return parseInt(a[2]) - parseInt(b[2]);
-        });
-        
-        sheet.getRange(2, 1, gradeData[grade].length, 4).setValues(gradeData[grade]);
-      }
-    }
-
-    // 3. Update Accounts
-    if (contents.accounts) {
-      var accountSheet = ss.getSheetByName("Accounts");
-      if (!accountSheet) {
-        accountSheet = ss.insertSheet("Accounts");
-      }
-      accountSheet.clear();
-      accountSheet.appendRow(["Thứ tự", "Tài khoản", "Mật khẩu", "Quyền", "Thời hạn", "Số máy"]);
-      if (contents.accounts.length > 0) {
-        var accountRows = contents.accounts.map(function(acc, idx) {
-          return [idx + 1, acc.username, acc.password, acc.role, acc.expiry, acc.maxDevices];
-        });
-        accountSheet.getRange(2, 1, accountRows.length, 6).setValues(accountRows);
-      }
-    }
-    
-    return ContentService.createTextOutput("Success")
-      .setMimeType(ContentService.MimeType.TEXT);
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã lưu dữ liệu an toàn!" }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
   } catch (err) {
-    return ContentService.createTextOutput("Error: " + err.toString())
-      .setMimeType(ContentService.MimeType.TEXT);
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }

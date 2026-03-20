@@ -1,17 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html {
+    font-size: 18px; /* Further increased base font size */
+  }
+  
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans;
+  }
 }
 
 @layer components {
   .nav-link {
-    @apply flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200;
+    @apply flex items-center gap-2 px-4 py-3 rounded-xl text-lg font-bold transition-all duration-200;
   }
   
   .nav-link-active {
@@ -19,57 +27,18 @@
   }
   
   .nav-link-inactive {
-    @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+    @apply text-slate-700 hover:bg-slate-100 hover:text-slate-900;
   }
 
   .section-card {
-    @apply bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200;
+    @apply bg-white p-8 sm:p-12 rounded-[3rem] shadow-sm border border-slate-200;
   }
 
   .input-field {
-    @apply p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900;
+    @apply p-5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900 text-lg;
   }
-}
 
-body {
-  @apply text-slate-900 antialiased;
-}
-
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", sans-serif;
-}
-
-@layer base {
-  body {
-    @apply bg-slate-50 text-slate-800 antialiased;
-  }
-}
-
-@layer components {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl shadow-slate-200/50 rounded-3xl;
-  }
-  
-  .nav-link {
-    @apply px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2;
-  }
-  
-  .nav-link-active {
-    @apply bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/50;
-  }
-  
-  .nav-link-inactive {
-    @apply text-slate-500 hover:bg-slate-100 hover:text-slate-800;
-  }
-}
-
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-}
-
-@layer base {
-  body {
-    @apply antialiased text-slate-900 bg-slate-50;
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl shadow-slate-200/50 rounded-[2.5rem];
   }
 }

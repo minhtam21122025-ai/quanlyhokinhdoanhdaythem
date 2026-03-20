@@ -221,33 +221,33 @@ const Dashboard = ({
       className="flex flex-col gap-8"
     >
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[2rem] p-8 lg:p-12 text-white shadow-2xl shadow-indigo-200">
-        <div className="relative z-10 max-w-2xl">
+      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[3rem] p-10 lg:p-16 text-white shadow-2xl shadow-indigo-200">
+        <div className="relative z-10 max-w-3xl">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider mb-6">
-              <Sparkles size={14} /> Hệ thống quản lý giáo dục
+            <span className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/20 backdrop-blur-md text-sm font-black uppercase tracking-widest mb-8">
+              <Sparkles size={18} /> Hệ thống quản lý giáo dục
             </span>
-            <h1 className="text-4xl lg:text-5xl font-black mb-4 leading-tight font-display">
+            <h1 className="text-6xl lg:text-8xl font-black mb-8 leading-tight font-display tracking-tighter">
               Chào mừng trở lại, <br />
               <span className="text-indigo-100">{currentUser?.username}</span>
             </h1>
-            <p className="text-white text-lg mb-8 leading-relaxed">
+            <p className="text-white text-3xl mb-12 leading-relaxed opacity-95 font-bold">
               Hệ thống HOÀNG GIA giúp bạn tối ưu hóa quy trình quản lý học sinh, chương trình giảng dạy và tài chính một cách chuyên nghiệp nhất.
             </p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-8">
               <button 
                 onClick={() => setActiveTab('students')}
-                className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-all flex items-center gap-2 shadow-lg"
+                className="px-10 py-5 bg-white text-indigo-600 rounded-[1.5rem] font-black text-2xl hover:bg-indigo-50 transition-all flex items-center gap-4 shadow-2xl active:scale-95"
               >
-                <Plus size={20} /> Thêm học sinh
+                <Plus size={32} /> Thêm học sinh
               </button>
               <button 
                 onClick={() => setActiveTab('finance')}
-                className="px-6 py-3 bg-indigo-500/30 backdrop-blur-md border border-white/20 text-white rounded-xl font-bold hover:bg-white/20 transition-all flex items-center gap-2"
+                className="px-10 py-5 bg-indigo-500/30 backdrop-blur-md border-2 border-white/20 text-white rounded-[1.5rem] font-black text-2xl hover:bg-white/20 transition-all flex items-center gap-4 active:scale-95"
               >
                 Xem báo cáo tài chính
               </button>
@@ -262,33 +262,33 @@ const Dashboard = ({
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * i }}
-            className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group"
+            className="bg-white p-8 rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-xl transition-all group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-2xl ${stat.color} group-hover:scale-110 transition-transform`}>
-                {stat.icon}
+            <div className="flex items-center justify-between mb-6">
+              <div className={`p-4 rounded-2xl ${stat.color} group-hover:scale-110 transition-transform ring-1 ring-slate-100`}>
+                {React.cloneElement(stat.icon as React.ReactElement, { size: 32 })}
               </div>
-              <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
+              <span className="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl ring-1 ring-emerald-100">
                 {stat.trend}
               </span>
             </div>
-            <p className="text-slate-700 text-sm font-bold mb-1">{stat.label}</p>
-            <h3 className="text-2xl font-black text-slate-900 font-display">{stat.value}</h3>
+            <p className="text-slate-600 text-xl font-black mb-3 uppercase tracking-widest">{stat.label}</p>
+            <h3 className="text-5xl font-black text-slate-900 font-display tracking-tighter">{stat.value}</h3>
           </motion.div>
         ))}
       </div>
 
       {/* Main Modules */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Module Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           <ModuleCard 
             title="Cấu hình HKD"
             desc="Quản lý thông tin hộ kinh doanh, hệ thống và phân quyền."
@@ -329,18 +329,18 @@ const Dashboard = ({
         </div>
 
         {/* Charts Section */}
-        <div className="flex flex-col gap-6">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-8">
+          <div className="bg-white p-10 rounded-[3rem] border-2 border-slate-100 shadow-sm hover:shadow-xl transition-all">
+            <div className="flex items-center justify-between mb-10">
               <div>
-                <h3 className="text-xl font-black text-slate-900 font-display">Tỉ lệ duy trì học sinh</h3>
-                <p className="text-slate-700 text-sm font-medium">Phân tích biến động số lượng học sinh theo tháng</p>
+                <h3 className="text-4xl font-black text-slate-900 font-display tracking-tight">Tỉ lệ duy trì học sinh</h3>
+                <p className="text-slate-600 text-xl font-bold mt-2">Phân tích biến động số lượng học sinh theo tháng</p>
               </div>
-              <div className="p-2 bg-slate-50 rounded-xl">
-                <TrendingUp className="text-indigo-600 w-5 h-5" />
+              <div className="p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-100">
+                <TrendingUp className="text-indigo-600 w-8 h-8" />
               </div>
             </div>
-            <div className="h-[240px] w-full">
+            <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -376,26 +376,26 @@ const Dashboard = ({
                 </ResponsiveContainer>
               </div>
               <div>
-                <h4 className="text-sm font-black text-slate-700 uppercase tracking-wider mb-1">Chuyên cần</h4>
-                <p className="text-2xl font-black text-slate-900 font-display">94.2%</p>
-                <p className="text-xs text-emerald-600 font-black mt-1">Tăng 2.4% so với tuần trước</p>
+                <h4 className="text-lg font-black text-slate-700 uppercase tracking-wider mb-1">Chuyên cần</h4>
+                <p className="text-4xl font-black text-slate-900 font-display">94.2%</p>
+                <p className="text-base text-emerald-600 font-black mt-2">Tăng 2.4% so với tuần trước</p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-              <h4 className="text-sm font-black text-slate-700 uppercase tracking-wider mb-4">Học phí tháng này</h4>
-              <div className="flex items-end justify-between mb-2">
-                <p className="text-2xl font-black text-slate-900 font-display">75%</p>
-                <p className="text-xs font-black text-slate-600">45/60 học sinh</p>
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <h4 className="text-lg font-black text-slate-700 uppercase tracking-wider mb-6">Học phí tháng này</h4>
+              <div className="flex items-end justify-between mb-3">
+                <p className="text-4xl font-black text-slate-900 font-display">75%</p>
+                <p className="text-base font-black text-slate-600">45/60 học sinh</p>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: '75%' }}
                   className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
                 />
               </div>
-              <p className="text-[10px] text-slate-600 mt-3 font-bold italic">* Đã bao gồm các khoản thu bổ sung</p>
+              <p className="text-sm text-slate-600 mt-4 font-black italic tracking-tight">* Đã bao gồm các khoản thu bổ sung</p>
             </div>
           </div>
         </div>
@@ -421,17 +421,17 @@ const ModuleCard = ({ title, desc, icon, onClick, color }: {
   return (
     <button 
       onClick={onClick}
-      className={`text-left p-8 bg-white border border-slate-100 rounded-[2rem] shadow-sm transition-all duration-300 group ${colorMap[color] || ''}`}
+      className={`text-left p-10 sm:p-12 bg-white border-2 border-slate-100 rounded-[3rem] shadow-sm transition-all duration-300 group ${colorMap[color] || ''} hover:shadow-2xl hover:-translate-y-2`}
     >
-      <div className="mb-6 group-hover:scale-110 transition-transform duration-300">
-        <div className="p-4 bg-slate-50 rounded-2xl w-fit group-hover:bg-white group-hover:shadow-lg transition-all">
-          {icon}
+      <div className="mb-10 group-hover:scale-110 transition-transform duration-300">
+        <div className="p-6 bg-slate-50 rounded-[1.5rem] w-fit group-hover:bg-white group-hover:shadow-xl transition-all ring-1 ring-slate-100">
+          {React.cloneElement(icon as React.ReactElement, { size: 36 })}
         </div>
       </div>
-      <h3 className="text-xl font-black text-slate-900 mb-2 font-display">{title}</h3>
-      <p className="text-slate-700 text-sm font-medium leading-relaxed mb-6">{desc}</p>
-      <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 group-hover:translate-x-2 transition-transform">
-        Truy cập ngay <ArrowRight size={16} />
+      <h3 className="text-4xl font-black text-slate-900 mb-4 font-display tracking-tight">{title}</h3>
+      <p className="text-slate-700 text-xl font-bold leading-relaxed mb-10 opacity-80">{desc}</p>
+      <div className="flex items-center gap-4 text-xl font-black text-indigo-600 group-hover:translate-x-3 transition-transform">
+        Truy cập ngay <ArrowRight size={28} />
       </div>
     </button>
   );
@@ -474,20 +474,19 @@ const Reports = ({
       <SectionHeader title="Báo cáo & Phân tích" subtitle="Tổng quan về tình hình học tập và tài chính" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Financial Summary */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-black text-slate-800 mb-8 font-display">Tóm tắt tài chính tháng {financialConfig.month}</h3>
-          <div className="h-[300px] w-full">
+        <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <h3 className="text-2xl font-black text-slate-800 mb-8 font-display">Tóm tắt tài chính tháng {financialConfig.month}</h3>
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 14, fontWeight: 700}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 14, fontWeight: 700}} />
                 <Tooltip 
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px'}}
                   cursor={{fill: '#f8fafc'}}
                 />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="value" radius={[12, 12, 0, 0]}>
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
@@ -496,35 +495,35 @@ const Reports = ({
             </ResponsiveContainer>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 mt-8">
-            <div className="p-4 bg-indigo-50 rounded-2xl">
-              <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Tổng thu</p>
-              <p className="text-lg font-black text-indigo-700">{totalRevenue.toLocaleString('vi-VN')}đ</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+            <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
+              <p className="text-sm font-black text-indigo-500 uppercase tracking-wider mb-2">Tổng thu</p>
+              <p className="text-2xl font-black text-indigo-700">{totalRevenue.toLocaleString('vi-VN')}đ</p>
             </div>
-            <div className="p-4 bg-rose-50 rounded-2xl">
-              <p className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-1">Tổng chi</p>
-              <p className="text-lg font-black text-rose-700">{totalExpenditure.toLocaleString('vi-VN')}đ</p>
+            <div className="p-6 bg-rose-50 rounded-3xl border border-rose-100">
+              <p className="text-sm font-black text-rose-500 uppercase tracking-wider mb-2">Tổng chi</p>
+              <p className="text-2xl font-black text-rose-700">{totalExpenditure.toLocaleString('vi-VN')}đ</p>
             </div>
-            <div className="p-4 bg-emerald-50 rounded-2xl">
-              <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">Thực thu</p>
-              <p className="text-lg font-black text-emerald-700">{netProfit.toLocaleString('vi-VN')}đ</p>
+            <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100">
+              <p className="text-sm font-black text-emerald-500 uppercase tracking-wider mb-2">Thực thu</p>
+              <p className="text-2xl font-black text-emerald-700">{netProfit.toLocaleString('vi-VN')}đ</p>
             </div>
           </div>
         </div>
 
         {/* Student Distribution */}
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-black text-slate-800 mb-8 font-display">Phân bổ học sinh</h3>
-          <div className="h-[300px] w-full">
+        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <h3 className="text-2xl font-black text-slate-800 mb-8 font-display">Phân bổ học sinh</h3>
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>
                 <Pie
                   data={gradeData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={8}
                   dataKey="value"
                 >
                   {gradeData.map((entry, index) => (
@@ -532,19 +531,19 @@ const Reports = ({
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px'}}
                 />
               </RePieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-col gap-3 mt-4">
+          <div className="flex flex-col gap-4 mt-6">
             {gradeData.map((grade, i) => (
-              <div key={grade.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }}></div>
-                  <span className="text-sm font-bold text-slate-600">{grade.name}</span>
+              <div key={grade.name} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: COLORS[i] }}></div>
+                  <span className="text-lg font-bold text-slate-700">{grade.name}</span>
                 </div>
-                <span className="text-sm font-black text-slate-800">{grade.value} học sinh</span>
+                <span className="text-lg font-black text-slate-900">{grade.value} học sinh</span>
               </div>
             ))}
           </div>
@@ -2190,45 +2189,47 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200"
         >
-          <div className="flex flex-col items-center gap-4 mb-8">
-            <div className="bg-indigo-600 p-4 rounded-2xl shadow-lg shadow-indigo-200">
-              <GraduationCap className="text-white w-10 h-10" />
+          <div className="flex flex-col items-center gap-6 mb-10">
+            <div className="bg-indigo-600 p-6 rounded-[2rem] shadow-2xl shadow-indigo-200 ring-4 ring-indigo-50">
+              <GraduationCap className="text-white w-16 h-16" />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-slate-900">Cơ sở giáo dục Hoàng Gia</h1>
-              <p className="text-slate-600 font-medium">Hệ thống quản lý nội bộ</p>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-tight">Cơ sở giáo dục <br/>Hoàng Gia</h1>
+              <p className="text-xl text-slate-600 font-bold mt-2">Hệ thống quản lý nội bộ</p>
             </div>
           </div>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold text-slate-800">Tài khoản</label>
+          <form onSubmit={handleLogin} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <label className="text-lg font-black text-slate-800 uppercase tracking-widest">Tài khoản</label>
               <input 
                 type="text" 
                 value={loginUsername} 
                 onChange={(e) => setLoginUsername(e.target.value)}
-                className="p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none text-slate-900" 
+                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-black transition-all placeholder:text-slate-400" 
+                placeholder="Nhập tài khoản..."
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold text-slate-800">Mật khẩu</label>
+            <div className="flex flex-col gap-3">
+              <label className="text-lg font-black text-slate-800 uppercase tracking-widest">Mật khẩu</label>
               <input 
                 type="password" 
                 value={loginPassword} 
                 onChange={(e) => setLoginPassword(e.target.value)}
-                className="p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none text-slate-900" 
+                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-black transition-all placeholder:text-slate-400" 
+                placeholder="Nhập mật khẩu..."
               />
             </div>
-            <button type="submit" className="mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
-              <LogIn size={20} />
+            <button type="submit" className="mt-6 bg-indigo-600 text-white py-5 rounded-[1.5rem] text-2xl font-black hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-200 flex items-center justify-center gap-4 active:scale-95">
+              <LogIn size={28} />
               Đăng nhập hệ thống
             </button>
             <button 
               type="button"
               onClick={fetchKHDHData}
-              className="mt-2 text-indigo-600 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"
+              className="mt-6 text-indigo-600 text-base font-black hover:underline flex items-center justify-center gap-3 mx-auto bg-indigo-50 px-6 py-3 rounded-2xl border border-indigo-100 transition-all hover:bg-indigo-100"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={20} />
               Đồng bộ tài khoản từ Google Sheets
             </button>
             <button 
@@ -2252,9 +2253,9 @@ export default function App() {
                   alert('Mật khẩu không chính xác!');
                 }
               }}
-              className="mt-2 text-rose-600 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"
+              className="mt-4 text-rose-600 text-base font-black hover:underline flex items-center justify-center gap-3 mx-auto"
             >
-              <ShieldCheck size={14} />
+              <ShieldCheck size={20} />
               Quản lý tài khoản (Admin)
             </button>
           </form>
@@ -2273,74 +2274,87 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
-              <GraduationCap className="text-white w-6 h-6" />
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 sm:px-12 py-5 sm:py-8 flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-16">
+          <div className="flex items-center gap-6">
+            <div className="bg-indigo-600 p-4 rounded-[1.25rem] shadow-2xl shadow-indigo-200 ring-4 ring-indigo-50">
+              <GraduationCap className="text-white w-10 h-10" />
             </div>
-            <span className="font-black text-xl text-slate-800 tracking-tight font-display uppercase">Hoàng Gia</span>
+            <span className="font-black text-4xl text-slate-900 tracking-tighter font-display uppercase hidden sm:block">Hoàng Gia</span>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-4">
             <button onClick={() => setActiveTab('dashboard')} className={`nav-link ${activeTab === 'dashboard' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <Home size={18} /> Trang chủ
+              <Home size={28} /> Trang chủ
             </button>
             <button onClick={() => setActiveTab('students')} className={`nav-link ${activeTab === 'students' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <Users size={18} /> Học sinh
+              <Users size={28} /> Học sinh
             </button>
             <button onClick={() => setActiveTab('program')} className={`nav-link ${activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <ClipboardList size={18} /> Chương trình
+              <ClipboardList size={28} /> Chương trình
             </button>
             <button onClick={() => setActiveTab('finance')} className={`nav-link ${activeTab === 'finance' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <DollarSign size={18} /> Tài chính
+              <DollarSign size={28} /> Tài chính
             </button>
             <button onClick={() => setActiveTab('reports')} className={`nav-link ${activeTab === 'reports' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <BarChart3 size={18} /> Báo cáo
+              <BarChart3 size={28} /> Báo cáo
             </button>
             <button onClick={() => setActiveTab('config_hkd')} className={`nav-link ${activeTab === 'config_hkd' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <Settings size={18} /> Tùy chỉnh
+              <Settings size={28} /> Tùy chỉnh
             </button>
             {isAdmin && (
               <button onClick={() => setActiveTab('accounts')} className={`nav-link ${activeTab === 'accounts' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-                <ShieldCheck size={18} /> Tài khoản
+                <ShieldCheck size={28} /> Tài khoản
               </button>
             )}
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+        <div className="flex items-center gap-6 sm:gap-10">
+          <button className="p-4 text-slate-600 hover:text-indigo-600 transition-colors relative bg-slate-100 rounded-[1.25rem] hover:bg-slate-200">
+            <Bell size={28} />
+            <span className="absolute top-4 right-4 w-4 h-4 bg-rose-500 rounded-full border-2 border-white"></span>
           </button>
           
-          <div className="h-8 w-px bg-slate-200 mx-2"></div>
+          <div className="h-14 w-px bg-slate-200 mx-2 hidden sm:block"></div>
 
-          <div className="flex items-center gap-3 group cursor-pointer relative">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-slate-900 leading-none">{currentUser?.username}</p>
-              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-wider mt-1">{currentUser?.role}</p>
+          <div className="flex items-center gap-6 group cursor-pointer relative">
+            <div className="text-right hidden md:block">
+              <p className="text-xl font-black text-slate-900 leading-none">{currentUser?.username}</p>
+              <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mt-3">{currentUser?.role}</p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">
+            <div className="w-14 h-14 rounded-[1.25rem] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-2xl shadow-2xl shadow-indigo-200 ring-4 ring-white group-hover:scale-105 transition-transform">
               {currentUser?.username?.charAt(0).toUpperCase()}
             </div>
-            <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+            <ChevronDown size={24} className="text-slate-400 group-hover:text-indigo-600 transition-colors hidden sm:block" />
 
             {/* Dropdown */}
-            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2">
-              <button className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-                <User size={16} /> Thông tin
+            <div className="absolute top-full right-0 mt-6 w-72 bg-white rounded-[2rem] shadow-2xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 py-6 z-[60] ring-1 ring-slate-200">
+              <div className="px-8 py-4 border-b border-slate-50 mb-4 md:hidden">
+                <p className="text-xl font-black text-slate-900 leading-none">{currentUser?.username}</p>
+                <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mt-3">{currentUser?.role}</p>
+              </div>
+              <button className="w-full px-8 py-5 text-left text-xl font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-5 transition-colors">
+                <User size={24} className="text-indigo-500" /> Thông tin cá nhân
               </button>
-              <button onClick={handleLogout} className="w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2">
-                <LogOut size={16} /> Đăng xuất
+              <button onClick={handleLogout} className="w-full px-8 py-5 text-left text-xl font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-5 transition-colors">
+                <LogOut size={24} /> Đăng xuất
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-3 flex items-center justify-around shadow-[0_-10px_40px_rgb(0,0,0,0.08)]">
+        <MobileNavLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home size={26} />} label="Home" />
+        <MobileNavLink active={activeTab === 'students'} onClick={() => setActiveTab('students')} icon={<Users size={26} />} label="Học sinh" />
+        <MobileNavLink active={activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal'} onClick={() => setActiveTab('program')} icon={<ClipboardList size={26} />} label="Dạy" />
+        <MobileNavLink active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon={<DollarSign size={26} />} label="Tiền" />
+        <MobileNavLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<BarChart3 size={26} />} label="Báo cáo" />
+      </nav>
+
+      <main className="flex-1 p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto w-full pb-24 lg:pb-12">
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <Dashboard 
@@ -2822,30 +2836,30 @@ export default function App() {
             </motion.div>
           )}
           {activeTab === 'students' && (
-            <motion.div key="students" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-6xl">
-              <div className="flex justify-between items-center mb-6">
+            <motion.div key="students" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-7xl">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
                 <SectionHeader title="Quản lý học sinh" subtitle="Danh sách học sinh và xuất đơn đăng ký" />
-                <div className="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl w-fit">
+                <div className="flex gap-4 p-3 bg-slate-200/50 rounded-[2rem] w-full md:w-auto">
                   <button 
                     onClick={() => setShowStudentActions(false)}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!showStudentActions ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 md:flex-none flex items-center justify-center gap-4 px-10 py-4 rounded-[1.5rem] text-xl font-black transition-all ${!showStudentActions ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
-                    <Users size={18} />
-                    Danh sách học sinh
+                    <Users size={28} />
+                    Danh sách
                   </button>
                   <button 
                     onClick={() => setShowStudentActions(true)}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${showStudentActions ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 md:flex-none flex items-center justify-center gap-4 px-10 py-4 rounded-[1.5rem] text-xl font-black transition-all ${showStudentActions ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
-                    <Settings size={18} />
-                    Thao tác dữ liệu
+                    <Settings size={28} />
+                    Thao tác
                   </button>
                 </div>
               </div>
 
               {!showStudentActions ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <button 
                       onClick={() => {
                         const templateData = [
@@ -2857,25 +2871,25 @@ export default function App() {
                         XLSX.utils.book_append_sheet(wb, ws, "Template");
                         XLSX.writeFile(wb, "Mau_Danh_Sach_Hoc_Sinh.xlsx");
                       }}
-                      className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:bg-indigo-50 hover:border-indigo-100 transition-all group shadow-sm"
+                      className="flex items-center gap-6 p-8 bg-white rounded-[2rem] border-2 border-slate-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all group shadow-sm hover:shadow-xl"
                     >
-                      <div className="p-2 bg-slate-100 rounded-xl group-hover:bg-indigo-100 transition-colors">
-                        <Download className="text-slate-500 group-hover:text-indigo-600" size={20} />
+                      <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-indigo-100 transition-colors ring-1 ring-slate-100">
+                        <Download className="text-slate-500 group-hover:text-indigo-600" size={32} />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-700">Tải mẫu Excel</p>
-                        <p className="text-xs text-slate-700 font-medium">Tải file mẫu để nhập danh sách</p>
+                        <p className="text-2xl font-black text-slate-900 group-hover:text-indigo-700 mb-1">Tải mẫu Excel</p>
+                        <p className="text-lg text-slate-600 font-bold">Tải file mẫu để nhập danh sách</p>
                       </div>
                     </button>
-                    <label className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:bg-indigo-50 hover:border-indigo-100 transition-all group shadow-sm cursor-pointer">
-                      <div className="p-2 bg-slate-100 rounded-xl group-hover:bg-indigo-100 transition-colors">
-                        <Upload className="text-slate-500 group-hover:text-indigo-600" size={20} />
+                    <label className="flex items-center gap-6 p-8 bg-white rounded-[2rem] border-2 border-slate-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all group shadow-sm hover:shadow-xl cursor-pointer">
+                      <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-indigo-100 transition-colors ring-1 ring-slate-100">
+                        <Upload className="text-slate-500 group-hover:text-indigo-600" size={32} />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-700">
-                          {isAnalyzing ? 'Đang phân tích AI...' : 'Tải lên danh sách học sinh'}
+                        <p className="text-2xl font-black text-slate-900 group-hover:text-indigo-700 mb-1">
+                          {isAnalyzing ? 'Đang phân tích AI...' : 'Tải lên danh sách'}
                         </p>
-                        <p className="text-xs text-slate-700 font-medium">Tải lên file Excel danh sách học sinh</p>
+                        <p className="text-lg text-slate-600 font-bold">Tải lên file Excel danh sách học sinh</p>
                       </div>
                       <input 
                         type="file" 
@@ -2901,35 +2915,35 @@ export default function App() {
                     </label>
                   </div>
 
-                  <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="bg-white rounded-[3rem] shadow-sm border-2 border-slate-100 overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
+                        <thead className="bg-slate-50 text-slate-900 text-lg uppercase tracking-widest font-black border-b-2 border-slate-100">
                           <tr>
-                            <th className="p-4">Họ và tên</th>
-                            <th className="p-4">Lớp</th>
-                            <th className="p-4">Trường</th>
-                            <th className="p-4">Phụ huynh</th>
-                            <th className="p-4">SĐT</th>
-                            <th className="p-4">Môn học</th>
-                            <th className="p-4 text-right">Thao tác</th>
+                            <th className="p-8">Họ và tên</th>
+                            <th className="p-8">Lớp</th>
+                            <th className="p-8">Trường</th>
+                            <th className="p-8">Phụ huynh</th>
+                            <th className="p-8">SĐT</th>
+                            <th className="p-8">Môn học</th>
+                            <th className="p-8 text-right">Thao tác</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {students.map((s) => (
                             <tr key={s.id} className="hover:bg-slate-50/50 transition-all group">
-                              <td className="p-4 font-medium text-slate-800">{s.name}</td>
-                              <td className="p-4 text-slate-600">{s.grade}</td>
-                              <td className="p-4 text-slate-600">{s.school}</td>
-                              <td className="p-4 text-slate-600">{s.parentName}</td>
-                              <td className="p-4 text-slate-600">{s.phone}</td>
-                              <td className="p-4 text-slate-600">{s.subjects}</td>
-                              <td className="p-4 text-right">
+                              <td className="p-8 font-black text-slate-900 text-2xl">{s.name}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.grade}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.school}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.parentName}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.phone}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.subjects}</td>
+                              <td className="p-8 text-right">
                                 <button 
                                   onClick={() => exportRegistrationForm(s)}
-                                  className="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1 ml-auto"
+                                  className="text-indigo-600 hover:text-indigo-800 text-lg font-black flex items-center gap-3 ml-auto bg-indigo-50 px-6 py-3 rounded-[1.25rem] transition-all hover:shadow-md active:scale-95"
                                 >
-                                  <FileDown size={14} />
+                                  <FileDown size={24} />
                                   Xuất đơn
                                 </button>
                               </td>
@@ -2937,9 +2951,9 @@ export default function App() {
                           ))}
                           {students.length === 0 && (
                             <tr>
-                              <td colSpan={7} className="p-20 text-center text-slate-400">
-                                <Users size={48} className="mx-auto mb-4 opacity-20" />
-                                Chưa có dữ liệu học sinh. Vui lòng tải lên danh sách.
+                              <td colSpan={7} className="p-32 text-center text-slate-400">
+                                <Users size={80} className="mx-auto mb-8 opacity-20" />
+                                <p className="text-2xl font-bold">Chưa có dữ liệu học sinh. Vui lòng tải lên danh sách.</p>
                               </td>
                             </tr>
                           )}
@@ -2949,19 +2963,19 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <button 
                       onClick={() => exportRegistrationForm(students)}
                       disabled={students.length === 0}
-                      className="flex items-center gap-3 p-4 bg-rose-600 rounded-2xl text-white hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 disabled:opacity-50 disabled:shadow-none group"
+                      className="flex items-center gap-6 p-8 bg-rose-600 rounded-[2rem] text-white hover:bg-rose-700 transition-all shadow-2xl shadow-rose-200 disabled:opacity-50 disabled:shadow-none group active:scale-95"
                     >
-                      <div className="p-2 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
-                        <FileDown size={20} />
+                      <div className="p-5 bg-white/20 rounded-2xl group-hover:bg-white/30 transition-colors">
+                        <FileDown size={32} />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold">Xuất toàn bộ đơn (Mẫu 2)</p>
-                        <p className="text-xs opacity-80">Tải xuống toàn bộ đơn đăng ký học sinh</p>
+                        <p className="text-2xl font-black mb-1">Xuất toàn bộ đơn</p>
+                        <p className="text-lg font-bold opacity-80">Tải xuống toàn bộ đơn đăng ký học sinh</p>
                       </div>
                     </button>
                     <button 
@@ -2974,60 +2988,60 @@ export default function App() {
                           setTimeout(() => setConfirmDelete(false), 5000); // Reset after 5s
                         }
                       }}
-                      className={`flex items-center gap-3 p-4 rounded-2xl border transition-all group shadow-sm ${confirmDelete ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-200 hover:bg-rose-50 hover:border-rose-100'}`}
+                      className={`flex items-center gap-6 p-8 rounded-[2rem] border-2 transition-all group shadow-sm active:scale-95 ${confirmDelete ? 'bg-rose-600 border-rose-600 text-white shadow-2xl shadow-rose-200' : 'bg-white border-slate-100 hover:bg-rose-50 hover:border-rose-200'}`}
                     >
-                      <div className={`p-2 rounded-xl transition-colors ${confirmDelete ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-rose-100'}`}>
-                        <Trash2 className={confirmDelete ? 'text-white' : 'text-slate-500 group-hover:text-rose-600'} size={20} />
+                      <div className={`p-5 rounded-2xl transition-colors ${confirmDelete ? 'bg-white/20' : 'bg-slate-50 group-hover:bg-rose-100'}`}>
+                        <Trash2 className={confirmDelete ? 'text-white' : 'text-slate-500 group-hover:text-rose-600'} size={32} />
                       </div>
                       <div className="text-left">
-                        <p className={`text-sm font-bold ${confirmDelete ? 'text-white' : 'text-slate-700 group-hover:text-rose-700'}`}>
+                        <p className={`text-2xl font-black mb-1 ${confirmDelete ? 'text-white' : 'text-slate-900 group-hover:text-rose-700'}`}>
                           {confirmDelete ? 'Xác nhận xóa?' : 'Xóa danh sách'}
                         </p>
-                        <p className={`text-xs ${confirmDelete ? 'text-white/80' : 'text-slate-500'}`}>
+                        <p className={`text-lg font-bold ${confirmDelete ? 'text-white/80' : 'text-slate-600'}`}>
                           {confirmDelete ? 'Nhấn lần nữa để xóa vĩnh viễn' : 'Xóa toàn bộ dữ liệu hiện tại'}
                         </p>
                       </div>
                     </button>
                   </div>
 
-                  <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-bottom border-slate-100 flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                        <ClipboardList size={16} className="text-indigo-500" />
-                        Danh sách học sinh đã đồng bộ
+                  <div className="bg-white rounded-[3rem] shadow-sm border-2 border-slate-100 overflow-hidden">
+                    <div className="p-8 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
+                      <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
+                        <ClipboardList size={32} className="text-indigo-600" />
+                        Danh sách đã đồng bộ
                       </h3>
-                      <span className="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                      <span className="text-xl font-black text-indigo-600 bg-white px-6 py-2 rounded-2xl border-2 border-indigo-100 shadow-sm">
                         {students.length} học sinh
                       </span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
+                        <thead className="bg-slate-50 text-slate-900 text-lg uppercase tracking-widest font-black border-b-2 border-slate-100">
                           <tr>
-                            <th className="p-4">Họ và tên</th>
-                            <th className="p-4">Lớp</th>
-                            <th className="p-4">Trường</th>
-                            <th className="p-4">Phụ huynh</th>
-                            <th className="p-4">SĐT</th>
-                            <th className="p-4">Môn học</th>
+                            <th className="p-8">Họ và tên</th>
+                            <th className="p-8">Lớp</th>
+                            <th className="p-8">Trường</th>
+                            <th className="p-8">Phụ huynh</th>
+                            <th className="p-8">SĐT</th>
+                            <th className="p-8">Môn học</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {students.map((s) => (
                             <tr key={s.id} className="hover:bg-slate-50/50 transition-all">
-                              <td className="p-4 font-medium text-slate-800">{s.name}</td>
-                              <td className="p-4 text-slate-600">{s.grade}</td>
-                              <td className="p-4 text-slate-600">{s.school}</td>
-                              <td className="p-4 text-slate-600">{s.parentName}</td>
-                              <td className="p-4 text-slate-600">{s.phone}</td>
-                              <td className="p-4 text-slate-600">{s.subjects}</td>
+                              <td className="p-8 font-black text-slate-900 text-2xl">{s.name}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.grade}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.school}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.parentName}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.phone}</td>
+                              <td className="p-8 text-slate-700 font-bold text-xl">{s.subjects}</td>
                             </tr>
                           ))}
                           {students.length === 0 && (
                             <tr>
-                              <td colSpan={6} className="p-20 text-center text-slate-400">
-                                <Users size={48} className="mx-auto mb-4 opacity-20" />
-                                Chưa có dữ liệu học sinh để thao tác.
+                              <td colSpan={6} className="p-32 text-center text-slate-400">
+                                <Users size={80} className="mx-auto mb-8 opacity-20" />
+                                <p className="text-2xl font-bold">Chưa có dữ liệu học sinh để thao tác.</p>
                               </td>
                             </tr>
                           )}
@@ -3041,46 +3055,46 @@ export default function App() {
           )}
 
           {activeTab === 'finance' && (
-            <motion.div key="finance" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-5xl">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <motion.div key="finance" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-7xl">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-12">
                 <SectionHeader title="Quản lý tài chính" subtitle="Theo dõi thu chi và báo cáo tài chính" />
-                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+                <div className="flex items-center gap-3 bg-slate-100 p-3 rounded-[2rem] w-full lg:w-auto overflow-x-auto scrollbar-hide">
                   <button 
                     onClick={() => setFinanceSubTab('config')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeSubTab === 'config' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'config' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
-                    <Settings size={16} />
+                    <Settings size={24} />
                     Cấu hình
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('data')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeSubTab === 'data' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'data' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
-                    <ClipboardList size={16} />
+                    <ClipboardList size={24} />
                     Dữ liệu
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('revenue')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeSubTab === 'revenue' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'revenue' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
-                    <BarChart3 size={16} />
-                    Xuất sổ doanh thu
+                    <BarChart3 size={24} />
+                    Doanh thu
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('receipts')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeSubTab === 'receipts' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'receipts' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
-                    <FileText size={16} />
-                    Xuất phiếu thu chi
+                    <FileText size={24} />
+                    Phiếu thu chi
                   </button>
                 </div>
               </div>
               
               {financeSubTab === 'config' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                    <h3 className="text-xl font-bold text-slate-800 mb-6">Cấu hình tài chính</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+                  <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
+                    <h3 className="text-3xl font-black text-slate-900 mb-10 font-display tracking-tight">Cấu hình tài chính</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                       <InputGroup 
                         label="Kỳ báo cáo" 
                         value={financialConfig.period} 
@@ -3096,7 +3110,7 @@ export default function App() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                       <InputGroup 
                         label="Ngày xuất phiếu chi" 
                         value={financialConfig.voucherDate} 
@@ -3104,18 +3118,18 @@ export default function App() {
                         placeholder="YYYY-MM-DD" 
                         type="date"
                       />
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-8">
                         <InputGroup 
                           label="Người lập biểu" 
                           value={financialConfig.reporter} 
                           onChange={v => setFinancialConfig({...financialConfig, reporter: v})} 
-                          placeholder="Tên người lập biểu..." 
+                          placeholder="Tên..." 
                         />
                         <InputGroup 
                           label="Thủ quỹ" 
                           value={financialConfig.treasurer} 
                           onChange={v => setFinancialConfig({...financialConfig, treasurer: v})} 
-                          placeholder="Tên thủ quỹ..." 
+                          placeholder="Tên..." 
                         />
                       </div>
                     </div>
@@ -3126,28 +3140,28 @@ export default function App() {
                           setIsFinanceConfigSaved(true);
                           alert('Đã lưu cấu hình tài chính!');
                         }}
-                        className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                        className="bg-indigo-600 text-white px-12 py-5 rounded-[1.5rem] text-2xl font-black flex items-center gap-4 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-100 active:scale-95"
                       >
-                        <Save size={20} />
+                        <Save size={32} />
                         Lưu cấu hình
                       </button>
                     </div>
                   </div>
 
                   {isFinanceConfigSaved && (
-                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                      <h3 className="text-xl font-bold text-slate-800 mb-6">Tải dữ liệu thu chi</h3>
+                    <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
+                      <h3 className="text-3xl font-black text-slate-900 mb-10 font-display tracking-tight">Tải dữ liệu thu chi</h3>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
                         {/* Khu vực thu */}
-                        <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100">
-                          <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                            <ArrowDownCircle size={18} className="text-indigo-600" />
+                        <div className="p-10 bg-indigo-50/50 rounded-[2.5rem] border-2 border-indigo-100">
+                          <h4 className="text-2xl font-black text-indigo-900 mb-8 flex items-center gap-4">
+                            <ArrowDownCircle size={32} className="text-indigo-600" />
                             Khu vực thu (Bảng chấm công)
                           </h4>
-                          <label className="flex flex-col items-center justify-center gap-3 p-8 bg-white rounded-2xl border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer group">
-                            <FileText className="text-indigo-300 group-hover:text-indigo-600" size={32} />
-                            <span className="text-sm font-bold text-indigo-700">Tải bảng chấm công thu tiền</span>
+                          <label className="flex flex-col items-center justify-center gap-6 p-16 bg-white rounded-[2rem] border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer group shadow-sm">
+                            <FileText className="text-indigo-300 group-hover:text-indigo-600" size={64} />
+                            <span className="text-xl font-black text-indigo-700">Tải bảng chấm công thu tiền</span>
                             <input 
                               type="file" 
                               className="hidden" 
@@ -3243,22 +3257,22 @@ export default function App() {
                             />
                           </label>
                           {isRevenueFileUploaded && (
-                            <div className="mt-2 flex items-center gap-2 text-indigo-600 text-xs font-bold justify-center bg-indigo-50 py-2 rounded-xl border border-indigo-100">
-                              <CheckCircle size={14} />
+                            <div className="mt-4 flex items-center gap-3 text-indigo-600 text-sm font-black justify-center bg-indigo-50 py-3 rounded-2xl border border-indigo-100">
+                              <CheckCircle size={18} />
                               Hệ thống đã nhận file phiếu thu
                             </div>
                           )}
                         </div>
 
                         {/* Khu vực chi */}
-                        <div className="p-6 bg-emerald-50/50 rounded-3xl border border-emerald-100">
-                          <h4 className="font-bold text-emerald-900 mb-4 flex items-center gap-2">
-                            <ArrowUpCircle size={18} className="text-emerald-600" />
+                        <div className="p-8 bg-emerald-50/50 rounded-[2rem] border border-emerald-100">
+                          <h4 className="text-xl font-black text-emerald-900 mb-6 flex items-center gap-3">
+                            <ArrowUpCircle size={24} className="text-emerald-600" />
                             Khu vực chi (Bảng chi tiền)
                           </h4>
-                          <label className="flex flex-col items-center justify-center gap-3 p-8 bg-white rounded-2xl border-2 border-dashed border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all cursor-pointer group">
-                            <FileDown className="text-emerald-300 group-hover:text-emerald-600" size={32} />
-                            <span className="text-sm font-bold text-emerald-700">Tải bảng chi tiền</span>
+                          <label className="flex flex-col items-center justify-center gap-4 p-12 bg-white rounded-3xl border-2 border-dashed border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all cursor-pointer group">
+                            <FileDown className="text-emerald-300 group-hover:text-emerald-600" size={48} />
+                            <span className="text-lg font-black text-emerald-700">Tải bảng chi tiền</span>
                             <input 
                               type="file" 
                               className="hidden" 
@@ -3272,16 +3286,16 @@ export default function App() {
                             />
                           </label>
                           {isExpenditureFileUploaded && (
-                            <div className="mt-2 flex items-center gap-2 text-emerald-600 text-xs font-bold justify-center bg-emerald-50 py-2 rounded-xl border border-emerald-100">
-                              <CheckCircle size={14} />
+                            <div className="mt-4 flex items-center gap-3 text-emerald-600 text-sm font-black justify-center bg-emerald-50 py-3 rounded-2xl border border-emerald-100">
+                              <CheckCircle size={18} />
                               Hệ thống đã nhận file phiếu chi
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-3">
+                      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="flex items-center gap-4">
                           {(isRevenueFileUploaded || isExpenditureFileUploaded) && (
                             <button 
                               onClick={() => {
@@ -3292,9 +3306,9 @@ export default function App() {
                                   alert('Đồng bộ dữ liệu thành công! Bạn có thể kiểm tra và chỉnh sửa dữ liệu tại tab "Dữ liệu" trước khi xuất sổ.');
                                 }, 1500);
                               }}
-                              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all"
+                              className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl text-lg font-black shadow-xl hover:scale-105 transition-all"
                             >
-                              <Sparkles size={20} />
+                              <Sparkles size={24} />
                               Đồng bộ AI & Phân tích
                             </button>
                           )}
@@ -3307,19 +3321,19 @@ export default function App() {
                                 setTimeout(() => setConfirmDeleteFinance(false), 5000);
                               }
                             }}
-                            className={`flex items-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all shadow-lg ${confirmDeleteFinance ? 'bg-rose-600 text-white' : 'bg-white text-rose-600 border border-rose-200 hover:bg-rose-50'}`}
+                            className={`flex items-center gap-3 px-8 py-5 rounded-2xl text-lg font-black transition-all shadow-xl ${confirmDeleteFinance ? 'bg-rose-600 text-white' : 'bg-white text-rose-600 border border-rose-200 hover:bg-rose-50'}`}
                           >
-                            <Trash2 size={20} />
+                            <Trash2 size={24} />
                             {confirmDeleteFinance ? 'Đồng ý xóa dữ liệu' : 'Xóa dữ liệu tài chính'}
                           </button>
                         </div>
                         
                         <button 
                           onClick={() => exportAttendanceAndFees()}
-                          className="bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-900 transition-all shadow-lg"
+                          className="bg-slate-800 text-white px-8 py-4 rounded-2xl text-lg font-black flex items-center gap-3 hover:bg-slate-900 transition-all shadow-xl"
                         >
-                          <Download size={18} />
-                          Tải mẫu bảng chấm công (Mẫu 1)
+                          <Download size={24} />
+                          Tải mẫu bảng chấm công
                         </button>
                       </div>
                     </div>
@@ -3328,19 +3342,19 @@ export default function App() {
               )}
 
               {financeSubTab === 'data' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                    <div className="flex justify-between items-center mb-6">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                  <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
                       <div>
-                        <h3 className="text-xl font-bold text-slate-800">Dữ liệu thu tiền học sinh</h3>
-                        <p className="text-sm text-slate-700 font-medium">Kiểm tra và chỉnh sửa thông tin trước khi xuất báo cáo</p>
+                        <h3 className="text-3xl font-black text-slate-800">Dữ liệu thu tiền học sinh</h3>
+                        <p className="text-xl text-slate-600 font-bold">Kiểm tra và chỉnh sửa thông tin trước khi xuất báo cáo</p>
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-4">
                         <button 
                           onClick={() => setStudents([...students, { id: Date.now().toString(), name: '', grade: '', school: '', parentName: '', phone: '', subjects: '', registrationDate: new Date().toISOString().split('T')[0], fee: 0 }])}
-                          className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-indigo-100 transition-all"
+                          className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-black text-lg flex items-center gap-3 hover:bg-indigo-100 transition-all shadow-sm"
                         >
-                          <Plus size={14} /> Thêm học sinh
+                          <Plus size={24} /> Thêm học sinh
                         </button>
                       </div>
                     </div>
@@ -3349,25 +3363,25 @@ export default function App() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50">
-                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider w-16">TT</th>
-                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider">Họ và tên</th>
-                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider">Lớp / Địa chỉ</th>
-                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider">Số tiền thu</th>
-                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider w-20">Thao tác</th>
+                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest w-24">TT</th>
+                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest">Họ và tên</th>
+                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest">Lớp / Địa chỉ</th>
+                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest">Số tiền thu</th>
+                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest w-28">Thao tác</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-100">
                           {students.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="p-12 text-center text-slate-400 italic">
+                              <td colSpan={5} className="p-20 text-center text-slate-400 italic text-lg">
                                 Chưa có dữ liệu học sinh. Vui lòng tải file tại tab "Cấu hình".
                               </td>
                             </tr>
                           ) : (
                             students.map((s, idx) => (
                               <tr key={s.id} className="hover:bg-slate-50/50 transition-all">
-                                <td className="p-4 text-sm font-medium text-slate-500">{idx + 1}</td>
-                                <td className="p-2">
+                                <td className="p-6 text-xl font-bold text-slate-500">{idx + 1}</td>
+                                <td className="p-4">
                                   <input 
                                     type="text" 
                                     value={s.name} 
@@ -3376,11 +3390,11 @@ export default function App() {
                                       newStudents[idx].name = e.target.value;
                                       setStudents(newStudents);
                                     }}
-                                    className="w-full p-2 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-lg text-sm transition-all"
+                                    className="w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-bold text-slate-800 transition-all"
                                     placeholder="Họ tên..."
                                   />
                                 </td>
-                                <td className="p-2">
+                                <td className="p-4">
                                   <input 
                                     type="text" 
                                     value={s.grade} 
@@ -3389,11 +3403,11 @@ export default function App() {
                                       newStudents[idx].grade = e.target.value;
                                       setStudents(newStudents);
                                     }}
-                                    className="w-full p-2 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-lg text-sm transition-all"
+                                    className="w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-bold text-slate-800 transition-all"
                                     placeholder="Lớp..."
                                   />
                                 </td>
-                                <td className="p-2">
+                                <td className="p-4">
                                   <div className="relative">
                                     <input 
                                       type="number" 
@@ -3403,22 +3417,22 @@ export default function App() {
                                         newStudents[idx].fee = parseInt(e.target.value) || 0;
                                         setStudents(newStudents);
                                       }}
-                                      className={`w-full p-2 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-lg text-sm transition-all ${s.fee === 0 ? 'text-rose-500 font-bold' : ''}`}
+                                      className={`w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-black transition-all ${s.fee === 0 ? 'text-rose-500' : 'text-indigo-600'}`}
                                       placeholder="Số tiền..."
                                     />
                                     {s.fee === 0 && (
-                                      <span className="absolute -top-6 left-0 text-[10px] text-rose-500 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 whitespace-nowrap">
+                                      <span className="absolute -top-10 left-0 text-sm text-rose-500 font-black bg-rose-50 px-4 py-2 rounded-full border border-rose-100 whitespace-nowrap shadow-sm">
                                         Sẽ không xuất sổ (0đ)
                                       </span>
                                     )}
                                   </div>
                                 </td>
-                                <td className="p-4">
+                                <td className="p-6">
                                   <button 
                                     onClick={() => setStudents(students.filter(st => st.id !== s.id))}
-                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                    className="p-4 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
                                   >
-                                    <Trash2 size={16} />
+                                    <Trash2 size={24} />
                                   </button>
                                 </td>
                               </tr>
@@ -3429,13 +3443,13 @@ export default function App() {
                     </div>
                     
                     {students.length > 0 && (
-                      <div className="mt-8 flex justify-end">
+                      <div className="mt-10 flex justify-end">
                         <button 
                           onClick={() => setFinanceSubTab('revenue')}
-                          className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                          className="bg-indigo-600 text-white px-10 py-4 rounded-2xl text-lg font-black flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100"
                         >
                           Tiếp tục xuất sổ
-                          <ArrowRight size={18} />
+                          <ArrowRight size={24} />
                         </button>
                       </div>
                     )}
@@ -3444,34 +3458,37 @@ export default function App() {
               )}
 
               {financeSubTab === 'revenue' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-bold text-slate-800">Sổ chi tiết doanh thu</h3>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                  <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
+                      <div>
+                        <h3 className="text-3xl font-black text-slate-800">Sổ chi tiết doanh thu</h3>
+                        <p className="text-xl text-slate-600 font-bold">Quản lý các khoản chi và xuất báo cáo doanh thu</p>
+                      </div>
                       <button 
                         onClick={() => exportFinancialReports('revenue')}
-                        className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                        className="bg-emerald-600 text-white px-10 py-5 rounded-2xl text-lg font-black flex items-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
                       >
-                        <FileDown size={20} />
+                        <FileDown size={24} />
                         Xuất sổ doanh thu (Word)
                       </button>
                     </div>
 
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Nội dung chi chi tiết</h4>
+                    <div className="mb-10">
+                      <div className="flex justify-between items-center mb-6">
+                        <h4 className="font-black text-slate-700 uppercase text-sm tracking-widest">Nội dung chi chi tiết</h4>
                         <button 
                           onClick={() => setExpenditures([...expenditures, { id: Date.now().toString(), date: financialConfig.voucherDate, description: '', amount: 0, recipient: '', recipientAddress: '' }])}
-                          className="text-indigo-600 text-xs font-bold flex items-center gap-1 hover:underline"
+                          className="text-indigo-600 text-lg font-black flex items-center gap-2 hover:underline"
                         >
-                          <Plus size={14} /> Thêm nội dung chi
+                          <Plus size={20} /> Thêm nội dung chi
                         </button>
                       </div>
                       
-                      <div className="space-y-3">
+                      <div className="space-y-6">
                         {expenditures.map((exp, idx) => (
-                          <div key={exp.id} className="flex flex-col gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div key={exp.id} className="flex flex-col gap-6 bg-slate-50 p-8 rounded-[2rem] border border-slate-100">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                               <InputGroup label="Ngày" value={exp.date} onChange={v => {
                                 const newExp = [...expenditures];
                                 newExp[idx].date = v;
@@ -3718,33 +3735,47 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${active ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'}`}
+      className={`flex items-center gap-4 p-5 rounded-2xl transition-all ${active ? 'bg-indigo-50 text-indigo-700 shadow-md ring-1 ring-indigo-200' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'}`}
     >
-      <span className={`${active ? 'text-indigo-600' : 'text-slate-600'}`}>{icon}</span>
-      <span className="font-bold text-sm">{label}</span>
+      <span className={`${active ? 'text-indigo-600' : 'text-slate-600'}`}>{React.cloneElement(icon as React.ReactElement, { size: 28 })}</span>
+      <span className="font-black text-xl tracking-tight">{label}</span>
+    </button>
+  );
+}
+
+function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center gap-2 py-3 px-5 rounded-2xl transition-all ${active ? 'text-indigo-600 scale-110' : 'text-slate-500'}`}
+    >
+      <div className={`p-3 rounded-2xl transition-all ${active ? 'bg-indigo-50 shadow-md ring-1 ring-indigo-100' : ''}`}>
+        {React.cloneElement(icon as React.ReactElement, { size: 32 })}
+      </div>
+      <span className={`text-[13px] font-black uppercase tracking-widest ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
     </button>
   );
 }
 
 function SectionHeader({ title, subtitle }: { title: string, subtitle: string }) {
   return (
-    <div className="mb-8">
-      <h2 className="text-3xl font-black text-slate-900 tracking-tight">{title}</h2>
-      <p className="text-slate-600 font-bold">{subtitle}</p>
+    <div className="mb-12">
+      <h2 className="text-5xl font-black text-slate-900 tracking-tighter font-display leading-tight">{title}</h2>
+      <p className="text-slate-700 text-xl font-bold mt-3 opacity-90">{subtitle}</p>
     </div>
   );
 }
 
 function InputGroup({ label, value, onChange, placeholder, type = "text" }: { label: string, value: string, onChange: (v: string) => void, placeholder: string, type?: string }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-black text-slate-700 uppercase tracking-wider">{label}</label>
+    <div className="flex flex-col gap-3">
+      <label className="text-lg font-black text-slate-800 uppercase tracking-widest">{label}</label>
       <input 
         type={type} 
         value={value} 
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900 font-medium"
+        className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-slate-900 font-black text-xl placeholder:text-slate-400 placeholder:font-medium"
       />
     </div>
   );
