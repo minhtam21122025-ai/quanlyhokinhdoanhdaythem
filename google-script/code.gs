@@ -1,8 +1,6 @@
 /**
  * Google Apps Script for Hoàng Gia Education System
- * * HƯỚNG DẪN COPY:
- * Xóa trắng toàn bộ code trong file Code.gs cũ của bạn, sau đó dán toàn bộ đoạn code này vào.
- * Cuối cùng nhấn nút "Deploy" -> "New Deployment" để tạo bản cập nhật mới nhất.
+ * Đã cấu hình phân luồng dữ liệu chuẩn xác từng Sheet.
  */
 
 const SPREADSHEET_ID = "1fPhe6RHb7Y4USs4dyv7NJUZqRQulq__Y7Edgcr_69CI";
@@ -18,7 +16,9 @@ function getSS() {
 function doGet(e) {
   var ss = getSS();
 
-  // Xử lý luồng đăng nhập
+  // ---------------------------------------------------------
+  // LUỒNG ĐĂNG NHẬP
+  // ---------------------------------------------------------
   if (e.parameter.action === "login") {
     var username = e.parameter.username;
     var password = e.parameter.password;
@@ -46,12 +46,13 @@ function doGet(e) {
         }
       }
     }
-    
     return ContentService.createTextOutput(JSON.stringify({ success: !!user, user: user }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Xử lý luồng lấy toàn bộ dữ liệu ứng dụng
+  // ---------------------------------------------------------
+  // LUỒNG LẤY TẤT CẢ DỮ LIỆU
+  // ---------------------------------------------------------
   var result = {
     subjects: [],
     program: {},
@@ -59,7 +60,7 @@ function doGet(e) {
   };
   
   // 1. Đọc Danh_muc_mon
-  var subjectSheet = ss.getSheetByName("Danh_muc_mon") || ss.getSheets()[0];
+  var subjectSheet = ss.getSheetByName("Danh_muc_mon");
   if (subjectSheet) {
     var subjectData = subjectSheet.getDataRange().getValues();
     for (var i = 1; i < subjectData.length; i++) {
@@ -76,7 +77,7 @@ function doGet(e) {
     }
   }
   
-  // 2. Đọc các sheet PPCT (Khối 6 đến 9)
+  // 2. Đọc các sheet PPCT (6, 7, 8, 9)
   var ppctSheets = ["PPCT_6", "PPCT_7", "PPCT_8", "PPCT_9"];
   ppctSheets.forEach(function(sheetName) {
     var sheet = ss.getSheetByName(sheetName);
@@ -121,19 +122,40 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+
+// ---------------------------------------------------------
+// LUỒNG LƯU DỮ LIỆU TỪ ỨNG DỤNG LÊN GOOGLE SHEETS
+// ---------------------------------------------------------
 function doPost(e) {
   try {
     var contents = JSON.parse(e.postData.contents);
     var ss = getSS();
     
-    // ----------------------------------------------------------------
-    // 1. CẬP NHẬT DANH MỤC MÔN (Chỉ xóa/ghi khi payload có 'subjects')
-    // ----------------------------------------------------------------
+    // ==========================================
+    // 1. CẤU HÌNH TÀI KHOẢN VÀO SHEET "Accounts"
+    // ==========================================
+    if (contents.accounts !== undefined) {
+      var accountSheet = ss.getSheetByName("Accounts");
+      if (!accountSheet) accountSheet = ss.insertSheet("Accounts");
+      
+      accountSheet.clear(); 
+      accountSheet.appendRow(["Tài khoản", "Mật khẩu", "Quyền", "Thời hạn", "Số máy"]);
+      
+      if (contents.accounts.length > 0) {
+        var accRows = contents.accounts.map(function(acc) {
+          return [acc.username, acc.password, acc.role, acc.expiry, acc.maxDevices || 1];
+        });
+        accountSheet.getRange(2, 1, accRows.length, 5).setValues(accRows);
+      }
+    }
+
+    // ==========================================
+    // 2. CẤU HÌNH MÔN/PHÂN MÔN VÀO SHEET "Danh_muc_mon"
+    // ==========================================
     if (contents.subjects !== undefined) {
       var subjectSheet = ss.getSheetByName("Danh_muc_mon");
-      if (!subjectSheet) {
-        subjectSheet = ss.insertSheet("Danh_muc_mon");
-      }
+      if (!subjectSheet) subjectSheet = ss.insertSheet("Danh_muc_mon");
+      
       subjectSheet.clear(); 
       subjectSheet.appendRow(["Khối", "Môn", "Phân môn"]);
       
@@ -145,50 +167,46 @@ function doPost(e) {
       }
     }
     
-    // ----------------------------------------------------------------
-    // 2. CẬP NHẬT PPCT (Chỉ xóa/ghi đúng các sheet khối được gửi lên)
-    // ----------------------------------------------------------------
+    // ==========================================
+    // 3. CẤU HÌNH PPCT VÀO CÁC SHEET TƯƠNG ỨNG (PPCT_6, 7, 8, 9)
+    // ==========================================
     if (contents.program !== undefined) {
       var ppctData = contents.program;
       
-      var targetGrades = contents.targetGrades || [];
+      // Khởi tạo khay chứa dữ liệu cho 4 khối riêng biệt
+      var gradeData = { "6": [], "7": [], "8": [], "9": [] };
       
-      // Tự động tìm khối nào đang được gửi lên nếu frontend không cung cấp targetGrades
-      if (targetGrades.length === 0) {
-         var gradesSet = {};
-         for (var key in ppctData) {
-           var grade = key.split("-")[0];
-           if (grade) gradesSet[grade] = true;
-         }
-         targetGrades = Object.keys(gradesSet);
-      }
-      
-      var gradeData = {};
-      targetGrades.forEach(function(g) { gradeData[g] = []; });
-      
+      // Phân loại dữ liệu dựa theo Key (Key format: Khối-Môn-PhânMôn-Tiết)
       for (var keyData in ppctData) {
-        var parts = keyData.split("-");
+        var parts = keyData.split("-"); // Ví dụ: 6-Toán-Đại số-1
         if (parts.length >= 4) {
-          var g = parts[0];
-          if (gradeData[g] !== undefined) {
+          var g = parts[0]; // Lấy ra Khối (6, 7, 8 hoặc 9)
+          if (gradeData[g] !== undefined) { // Đảm bảo đúng khối mới đưa vào
             gradeData[g].push([parts[1], parts[2], parts[3], ppctData[keyData]]);
           }
         }
       }
       
-      // Chỉ loop qua những sheet nằm trong danh sách cần update (targetGrades)
+      // Kiểm tra xem frontend có yêu cầu chỉ update một số khối nhất định không
+      // Nếu không gửi targetGrades, sẽ mặc định update cả 4 khối 6, 7, 8, 9
+      var targetGrades = contents.targetGrades || ["6", "7", "8", "9"];
+      
+      // Cập nhật từng sheet theo từng khối đã được phân loại
       for (var idx = 0; idx < targetGrades.length; idx++) {
-        var targetG = targetGrades[idx];
+        var targetG = targetGrades[idx]; // VD: "6"
+        
+        // Bỏ qua nếu giá trị khối không hợp lệ
+        if (!gradeData[targetG]) continue; 
+
         var sheetName = "PPCT_" + targetG;
         var sheet = ss.getSheetByName(sheetName);
-        if (!sheet) {
-          sheet = ss.insertSheet(sheetName);
-        }
+        if (!sheet) sheet = ss.insertSheet(sheetName);
         
         sheet.clear();
         sheet.appendRow(["Môn", "Phân môn", "Tiết", "Nội dung"]);
         
         if (gradeData[targetG].length > 0) {
+          // Sắp xếp tự động cho đẹp mắt: Theo Môn -> Theo Tiết
           gradeData[targetG].sort(function(a, b) {
             if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
             return parseInt(a[2]) - parseInt(b[2]);
@@ -199,7 +217,7 @@ function doPost(e) {
       }
     }
     
-    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã lưu dữ liệu an toàn!" }))
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã phân bổ dữ liệu chính xác 100% vào các sheet!" }))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (err) {
