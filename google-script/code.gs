@@ -24,9 +24,44 @@ function getSS() {
 
 function doGet(e) {
   var ss = getSS();
+
+  // Handle Login Action
+  if (e.parameter.action === "login") {
+    var username = e.parameter.username;
+    var password = e.parameter.password;
+    var user = null;
+    
+    var accountSheet = ss.getSheetByName("Accounts");
+    if (accountSheet) {
+      var accountData = accountSheet.getDataRange().getValues();
+      var headers = accountData[0].map(function(h) { return h.toString().toLowerCase(); });
+      for (var i = 1; i < accountData.length; i++) {
+        var row = accountData[i];
+        var acc = { id: i.toString(), index: i };
+        headers.forEach(function(h, j) {
+          var val = row[j];
+          if (h.includes("tài khoản") || h.includes("username")) acc.username = val ? val.toString() : "";
+          if (h.includes("mật khẩu") || h.includes("password")) acc.password = val ? val.toString() : "";
+          if (h.includes("quyền") || h.includes("role")) acc.role = val ? val.toString() : "";
+          if (h.includes("thời hạn") || h.includes("expiry")) acc.expiry = val ? val.toString() : "";
+          if (h.includes("số máy") || h.includes("devices")) acc.maxDevices = parseInt(val) || 1;
+        });
+        
+        if (acc.username === username && acc.password === password) {
+          user = acc;
+          break;
+        }
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: !!user, user: user }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   var result = {
     subjects: [],
-    program: {}
+    program: {},
+    accounts: []
   };
   
   // 1. Read Subjects (Sheet 1)
@@ -65,6 +100,26 @@ function doGet(e) {
       }
     }
   });
+
+  // 3. Read Accounts
+  var accountSheet = ss.getSheetByName("Accounts");
+  if (accountSheet) {
+    var accountData = accountSheet.getDataRange().getValues();
+    var headers = accountData[0].map(function(h) { return h.toString().toLowerCase(); });
+    for (var i = 1; i < accountData.length; i++) {
+      var row = accountData[i];
+      var acc = { id: i.toString(), index: i };
+      headers.forEach(function(h, j) {
+        var val = row[j];
+        if (h.includes("tài khoản") || h.includes("username")) acc.username = val ? val.toString() : "";
+        if (h.includes("mật khẩu") || h.includes("password")) acc.password = val ? val.toString() : "";
+        if (h.includes("quyền") || h.includes("role")) acc.role = val ? val.toString() : "";
+        if (h.includes("thời hạn") || h.includes("expiry")) acc.expiry = val ? val.toString() : "";
+        if (h.includes("số máy") || h.includes("devices")) acc.maxDevices = parseInt(val) || 1;
+      });
+      if (acc.username) result.accounts.push(acc);
+    }
+  }
   
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
@@ -119,6 +174,22 @@ function doPost(e) {
         });
         
         sheet.getRange(2, 1, gradeData[grade].length, 4).setValues(gradeData[grade]);
+      }
+    }
+
+    // 3. Update Accounts
+    if (contents.accounts) {
+      var accountSheet = ss.getSheetByName("Accounts");
+      if (!accountSheet) {
+        accountSheet = ss.insertSheet("Accounts");
+      }
+      accountSheet.clear();
+      accountSheet.appendRow(["Thứ tự", "Tài khoản", "Mật khẩu", "Quyền", "Thời hạn", "Số máy"]);
+      if (contents.accounts.length > 0) {
+        var accountRows = contents.accounts.map(function(acc, idx) {
+          return [idx + 1, acc.username, acc.password, acc.role, acc.expiry, acc.maxDevices];
+        });
+        accountSheet.getRange(2, 1, accountRows.length, 6).setValues(accountRows);
       }
     }
     

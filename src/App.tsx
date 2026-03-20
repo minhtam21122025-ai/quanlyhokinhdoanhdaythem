@@ -30,15 +30,44 @@ import {
   CheckCircle,
   BarChart3,
   ArrowDownCircle,
-  ArrowUpCircle
+  ArrowUpCircle,
+  ArrowRight,
+  Home,
+  PieChart,
+  LogOut,
+  ChevronDown,
+  Bell,
+  Search,
+  Menu,
+  X,
+  TrendingUp,
+  Activity,
+  Award,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  PieChart as RePieChart, 
+  Pie, 
+  Cell,
+  LineChart,
+  Line,
+  AreaChart,
+  Area
+} from 'recharts';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow as DocxTableRow, WidthType, AlignmentType, HeadingLevel, TextRun, PageOrientation, VerticalMergeType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 
 import { GoogleGenAI } from "@google/genai";
 
-type Tab = 'login' | 'config_hkd' | 'program' | 'schedule' | 'journal' | 'subject_config' | 'students' | 'finance';
+type Tab = 'dashboard' | 'login' | 'config_hkd' | 'program' | 'schedule' | 'journal' | 'subject_config' | 'students' | 'finance' | 'accounts' | 'reports';
 
 interface HKDConfig {
   name: string;
@@ -58,6 +87,16 @@ interface Student {
   subjects: string;
   registrationDate: string;
   fee?: number;
+}
+
+interface UserAccount {
+  id: string;
+  index: number;
+  username: string;
+  password?: string;
+  role: string;
+  expiry: string;
+  maxDevices: number;
 }
 
 interface TableRow {
@@ -139,6 +178,382 @@ const numberToVietnameseWords = (num: number): string => {
   return res.charAt(0).toUpperCase() + res.slice(1) + " đồng";
 };
 
+const Dashboard = ({ 
+  studentsCount, 
+  activeStudentsCount, 
+  revenue, 
+  setActiveTab, 
+  currentUser 
+}: { 
+  studentsCount: number; 
+  activeStudentsCount: number; 
+  revenue: number; 
+  setActiveTab: (tab: Tab) => void; 
+  currentUser: UserAccount | null;
+}) => {
+  const stats = [
+    { label: 'Tổng học sinh', value: studentsCount, icon: <Users className="text-blue-600" />, trend: '+12%', color: 'bg-blue-50' },
+    { label: 'Đang theo học', value: activeStudentsCount, icon: <Activity className="text-emerald-600" />, trend: '+5%', color: 'bg-emerald-50' },
+    { label: 'Doanh thu tháng', value: revenue.toLocaleString('vi-VN') + 'đ', icon: <DollarSign className="text-purple-600" />, trend: '+18%', color: 'bg-purple-50' },
+    { label: 'Tỉ lệ chuyên cần', value: '94.2%', icon: <Award className="text-orange-600" />, trend: '+2%', color: 'bg-orange-50' },
+  ];
+
+  const chartData = [
+    { name: 'Tháng 10', value: 45 },
+    { name: 'Tháng 11', value: 52 },
+    { name: 'Tháng 12', value: 48 },
+    { name: 'Tháng 1', value: 61 },
+    { name: 'Tháng 2', value: 55 },
+    { name: 'Tháng 3', value: 67 },
+  ];
+
+  const attendanceData = [
+    { name: 'Hiện diện', value: 94 },
+    { name: 'Vắng mặt', value: 6 },
+  ];
+
+  const COLORS = ['#6366f1', '#e2e8f0'];
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col gap-8"
+    >
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[2rem] p-8 lg:p-12 text-white shadow-2xl shadow-indigo-200">
+        <div className="relative z-10 max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider mb-6">
+              <Sparkles size={14} /> Hệ thống quản lý giáo dục
+            </span>
+            <h1 className="text-4xl lg:text-5xl font-black mb-4 leading-tight font-display">
+              Chào mừng trở lại, <br />
+              <span className="text-indigo-100">{currentUser?.username}</span>
+            </h1>
+            <p className="text-white text-lg mb-8 leading-relaxed">
+              Hệ thống HOÀNG GIA giúp bạn tối ưu hóa quy trình quản lý học sinh, chương trình giảng dạy và tài chính một cách chuyên nghiệp nhất.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <button 
+                onClick={() => setActiveTab('students')}
+                className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-all flex items-center gap-2 shadow-lg"
+              >
+                <Plus size={20} /> Thêm học sinh
+              </button>
+              <button 
+                onClick={() => setActiveTab('finance')}
+                className="px-6 py-3 bg-indigo-500/30 backdrop-blur-md border border-white/20 text-white rounded-xl font-bold hover:bg-white/20 transition-all flex items-center gap-2"
+              >
+                Xem báo cáo tài chính
+              </button>
+            </div>
+          </motion.div>
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none">
+          <GraduationCap className="w-full h-full transform translate-x-1/4 -translate-y-1/4 rotate-12" />
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * i }}
+            className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-2xl ${stat.color} group-hover:scale-110 transition-transform`}>
+                {stat.icon}
+              </div>
+              <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
+                {stat.trend}
+              </span>
+            </div>
+            <p className="text-slate-700 text-sm font-bold mb-1">{stat.label}</p>
+            <h3 className="text-2xl font-black text-slate-900 font-display">{stat.value}</h3>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Main Modules */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Module Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <ModuleCard 
+            title="Cấu hình HKD"
+            desc="Quản lý thông tin hộ kinh doanh, hệ thống và phân quyền."
+            icon={<Settings className="text-indigo-600" />}
+            onClick={() => setActiveTab('config_hkd')}
+            color="indigo"
+          />
+          <ModuleCard 
+            title="Quản lý học sinh"
+            desc="Danh sách học sinh, điểm danh và theo dõi tiến độ."
+            icon={<Users className="text-blue-600" />}
+            onClick={() => setActiveTab('students')}
+            color="blue"
+          />
+          <ModuleCard 
+            title="Chương trình dạy"
+            desc="Quản lý khóa học, giáo án và lịch báo giảng."
+            icon={<ClipboardList className="text-purple-600" />}
+            onClick={() => setActiveTab('program')}
+            color="purple"
+          />
+          <ModuleCard 
+            title="Quản lý tài chính"
+            desc="Theo dõi học phí, chi phí và báo cáo doanh thu."
+            icon={<DollarSign className="text-emerald-600" />}
+            onClick={() => setActiveTab('finance')}
+            color="emerald"
+          />
+          {currentUser?.role === 'Quản trị viên' && (
+            <ModuleCard 
+              title="Quản lý tài khoản"
+              desc="Cấu hình tài khoản người dùng, phân quyền và thời hạn sử dụng."
+              icon={<ShieldCheck className="text-rose-600" />}
+              onClick={() => setActiveTab('accounts')}
+              color="rose"
+            />
+          )}
+        </div>
+
+        {/* Charts Section */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 font-display">Tỉ lệ duy trì học sinh</h3>
+                <p className="text-slate-700 text-sm font-medium">Phân tích biến động số lượng học sinh theo tháng</p>
+              </div>
+              <div className="p-2 bg-slate-50 rounded-xl">
+                <TrendingUp className="text-indigo-600 w-5 h-5" />
+              </div>
+            </div>
+            <div className="h-[240px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                  <Tooltip 
+                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                    cursor={{fill: '#f8fafc'}}
+                  />
+                  <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6">
+              <div className="w-24 h-24">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart>
+                    <Pie
+                      data={attendanceData}
+                      innerRadius={30}
+                      outerRadius={40}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {attendanceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </RePieChart>
+                </ResponsiveContainer>
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-700 uppercase tracking-wider mb-1">Chuyên cần</h4>
+                <p className="text-2xl font-black text-slate-900 font-display">94.2%</p>
+                <p className="text-xs text-emerald-600 font-black mt-1">Tăng 2.4% so với tuần trước</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+              <h4 className="text-sm font-black text-slate-700 uppercase tracking-wider mb-4">Học phí tháng này</h4>
+              <div className="flex items-end justify-between mb-2">
+                <p className="text-2xl font-black text-slate-900 font-display">75%</p>
+                <p className="text-xs font-black text-slate-600">45/60 học sinh</p>
+              </div>
+              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: '75%' }}
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
+                />
+              </div>
+              <p className="text-[10px] text-slate-600 mt-3 font-bold italic">* Đã bao gồm các khoản thu bổ sung</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const ModuleCard = ({ title, desc, icon, onClick, color }: { 
+  title: string; 
+  desc: string; 
+  icon: React.ReactNode; 
+  onClick: () => void;
+  color: string;
+}) => {
+  const colorMap: Record<string, string> = {
+    indigo: 'hover:border-indigo-200 hover:bg-indigo-50/30',
+    blue: 'hover:border-blue-200 hover:bg-blue-50/30',
+    purple: 'hover:border-purple-200 hover:bg-purple-50/30',
+    emerald: 'hover:border-emerald-200 hover:bg-emerald-50/30',
+  };
+
+  return (
+    <button 
+      onClick={onClick}
+      className={`text-left p-8 bg-white border border-slate-100 rounded-[2rem] shadow-sm transition-all duration-300 group ${colorMap[color] || ''}`}
+    >
+      <div className="mb-6 group-hover:scale-110 transition-transform duration-300">
+        <div className="p-4 bg-slate-50 rounded-2xl w-fit group-hover:bg-white group-hover:shadow-lg transition-all">
+          {icon}
+        </div>
+      </div>
+      <h3 className="text-xl font-black text-slate-900 mb-2 font-display">{title}</h3>
+      <p className="text-slate-700 text-sm font-medium leading-relaxed mb-6">{desc}</p>
+      <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 group-hover:translate-x-2 transition-transform">
+        Truy cập ngay <ArrowRight size={16} />
+      </div>
+    </button>
+  );
+};
+
+const Reports = ({ 
+  students, 
+  financialConfig, 
+  expenditures 
+}: { 
+  students: Student[]; 
+  financialConfig: any; 
+  expenditures: any[];
+}) => {
+  const totalRevenue = students.reduce((sum, s) => sum + (s.fee ?? financialConfig.feePerSession), 0);
+  const totalExpenditure = expenditures.reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = totalRevenue - totalExpenditure;
+
+  const data = [
+    { name: 'Doanh thu', value: totalRevenue, fill: '#6366f1' },
+    { name: 'Chi phí', value: totalExpenditure, fill: '#f43f5e' },
+    { name: 'Lợi nhuận', value: netProfit, fill: '#10b981' },
+  ];
+
+  const gradeData = [
+    { name: 'Lớp 6', value: students.filter(s => s.grade === '6').length },
+    { name: 'Lớp 7', value: students.filter(s => s.grade === '7').length },
+    { name: 'Lớp 8', value: students.filter(s => s.grade === '8').length },
+    { name: 'Lớp 9', value: students.filter(s => s.grade === '9').length },
+  ];
+
+  const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e'];
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex flex-col gap-8"
+    >
+      <SectionHeader title="Báo cáo & Phân tích" subtitle="Tổng quan về tình hình học tập và tài chính" />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Financial Summary */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+          <h3 className="text-xl font-black text-slate-800 mb-8 font-display">Tóm tắt tài chính tháng {financialConfig.month}</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <Tooltip 
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                  cursor={{fill: '#f8fafc'}}
+                />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 mt-8">
+            <div className="p-4 bg-indigo-50 rounded-2xl">
+              <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-1">Tổng thu</p>
+              <p className="text-lg font-black text-indigo-700">{totalRevenue.toLocaleString('vi-VN')}đ</p>
+            </div>
+            <div className="p-4 bg-rose-50 rounded-2xl">
+              <p className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-1">Tổng chi</p>
+              <p className="text-lg font-black text-rose-700">{totalExpenditure.toLocaleString('vi-VN')}đ</p>
+            </div>
+            <div className="p-4 bg-emerald-50 rounded-2xl">
+              <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">Thực thu</p>
+              <p className="text-lg font-black text-emerald-700">{netProfit.toLocaleString('vi-VN')}đ</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Student Distribution */}
+        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+          <h3 className="text-xl font-black text-slate-800 mb-8 font-display">Phân bổ học sinh</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <RePieChart>
+                <Pie
+                  data={gradeData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {gradeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                />
+              </RePieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-col gap-3 mt-4">
+            {gradeData.map((grade, i) => (
+              <div key={grade.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }}></div>
+                  <span className="text-sm font-bold text-slate-600">{grade.name}</span>
+                </div>
+                <span className="text-sm font-black text-slate-800">{grade.value} học sinh</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -173,6 +588,11 @@ export default function App() {
         setKhdhData(data.program);
         localStorage.setItem('khdh_data', JSON.stringify(data.program));
       }
+
+      if (data.accounts && Array.isArray(data.accounts)) {
+        setUserAccounts(data.accounts);
+        localStorage.setItem('user_accounts', JSON.stringify(data.accounts));
+      }
       
       alert('Đã đồng bộ từ google sheets');
     } catch (error) {
@@ -198,11 +618,50 @@ export default function App() {
           program: programData
         }),
       });
-      alert('Đã đồng bộ từ google sheets');
+      alert('Đã đồng bộ lên Google Sheets thành công!');
     } catch (error) {
       console.error('Upload error:', error);
       alert('Lỗi khi gửi dữ liệu lên Google Sheets.');
     }
+  };
+
+  const getLastDayOfMonth = (monthStr: string) => {
+    if (!monthStr) return `Ngày ... tháng ... năm ...`;
+    const [m, y] = monthStr.split('/').map(Number);
+    if (!m || !y) return `Ngày ... tháng ... năm ...`;
+    const lastDay = new Date(y, m, 0).getDate();
+    return `Ngày ${lastDay} tháng ${m} năm ${y}`;
+  };
+
+  const deleteProgramForGrade = async (grade: number) => {
+    const newKhdhData = { ...khdhData };
+    Object.keys(newKhdhData).forEach(key => {
+      if (key.startsWith(`${grade}-`)) {
+        delete newKhdhData[key];
+      }
+    });
+    
+    setKhdhData(newKhdhData);
+    localStorage.setItem('khdh_data', JSON.stringify(newKhdhData));
+    setTeachingPrograms(prev => {
+      const next = { ...prev };
+      delete next[grade];
+      return next;
+    });
+    
+    await uploadToGoogleSheets(newKhdhData);
+    setConfirmDeleteGrade(null);
+    alert(`Đã xóa chương trình dạy khối ${grade} thành công!`);
+  };
+
+  const deleteFinanceData = () => {
+    setStudents([]);
+    setExpenditures([]);
+    setIsRevenueFileUploaded(false);
+    setIsExpenditureFileUploaded(false);
+    setUploadedFinanceFiles(0);
+    setConfirmDeleteFinance(false);
+    alert('Đã xóa toàn bộ dữ liệu tài chính hiện tại!');
   };
 
   const analyzeStudentList = async (data: any[][]) => {
@@ -365,7 +824,7 @@ export default function App() {
             indent: { firstLine: 720 },
             spacing: { line: 312 },
             children: [
-              new TextRun({ text: `Lớp: ${s.grade}`, size: 24 }),
+              new TextRun({ text: `Lớp: ${String(s.grade || '').replace(/Lớp\s*/gi, '')}`, size: 24 }),
             ],
           }),
           new Paragraph({
@@ -517,7 +976,7 @@ export default function App() {
     const rows = students.map((s, idx) => [
       idx + 1,
       s.name,
-      s.grade,
+      String(s.grade || '').replace(/Lớp\s*/gi, ''),
       ...Array(31).fill(''), // Attendance marks
       '', // Số buổi học
       financialConfig.feePerSession,
@@ -559,6 +1018,8 @@ export default function App() {
   };
 
   const exportFinancialReports = async (mode: 'all' | 'revenue' | 'receipts' | 'vouchers' = 'all') => {
+    // Filter out students with 0 fee to ensure consistency across all reports
+    const activeStudents = students.filter(s => (s.fee ?? financialConfig.feePerSession) > 0);
     const sections = [];
 
     const formatDate = (dateStr: string) => {
@@ -570,7 +1031,7 @@ export default function App() {
 
     // 1. Sổ doanh thu chi tiết (S1a-HKD)
     if (mode === 'all' || mode === 'revenue') {
-      const totalRevenue = students.reduce((acc, s) => acc + (s.fee || financialConfig.feePerSession), 0);
+      const totalRevenue = activeStudents.reduce((acc, s) => acc + (s.fee || financialConfig.feePerSession), 0);
       const totalExpenditure = expenditures.reduce((acc, e) => acc + e.amount, 0);
       const netTotal = totalRevenue - totalExpenditure;
 
@@ -588,39 +1049,39 @@ export default function App() {
         children: [
           new Paragraph({
             children: [
-              new TextRun({ text: "HỘ, CÁ NHÂN KINH DOANH: ", bold: true }),
-              new TextRun({ text: hkdConfig.name.toUpperCase() || "HOÀNG GIA" }),
+              new TextRun({ text: "HỘ, CÁ NHÂN KINH DOANH: ", bold: true, size: 26 }),
+              new TextRun({ text: hkdConfig.name.toUpperCase() || "HOÀNG GIA", size: 26 }),
             ],
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: "Địa chỉ: ", bold: true }),
-              new TextRun({ text: hkdConfig.address || "Lai Châu" }),
+              new TextRun({ text: "Địa chỉ: ", bold: true, size: 26 }),
+              new TextRun({ text: hkdConfig.address || "Lai Châu", size: 26 }),
             ],
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: "Mã số thuế: ", bold: true }),
-              new TextRun({ text: hkdConfig.taxId || "" }),
+              new TextRun({ text: "Mã số thuế: ", bold: true, size: 26 }),
+              new TextRun({ text: hkdConfig.taxId || "", size: 26 }),
             ],
           }),
           new Paragraph({ text: "", spacing: { after: 200 } }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             children: [
-              new TextRun({ text: "SỔ CHI TIẾT DOANH THU BÁN HÀNG HÓA, DỊCH VỤ", bold: true, size: 28 }),
+              new TextRun({ text: "SỔ CHI TIẾT DOANH THU BÁN HÀNG HÓA, DỊCH VỤ", bold: true, size: 32 }),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             children: [
-              new TextRun({ text: `Địa điểm kinh doanh: ${hkdConfig.address || "Lai Châu"}`, italics: true }),
+              new TextRun({ text: `Địa điểm kinh doanh: ${hkdConfig.address || "Lai Châu"}`, italics: true, size: 26 }),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             children: [
-              new TextRun({ text: `Kỳ kê khai: ${financialConfig.period}`, italics: true }),
+              new TextRun({ text: `Kỳ kê khai: ${financialConfig.period}`, italics: true, size: 26 }),
             ],
           }),
           new Paragraph({ text: "", spacing: { after: 400 } }),
@@ -630,29 +1091,32 @@ export default function App() {
             rows: [
               new DocxTableRow({
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Ngày tháng", bold: true })], alignment: AlignmentType.CENTER })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Giao dịch", bold: true })], alignment: AlignmentType.CENTER })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Số tiền", bold: true })], alignment: AlignmentType.CENTER })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Ngày tháng", bold: true, size: 26 })], alignment: AlignmentType.CENTER })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Giao dịch", bold: true, size: 26 })], alignment: AlignmentType.CENTER })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Số tiền", bold: true, size: 26 })], alignment: AlignmentType.CENTER })] }),
                 ],
               }),
-              ...students.map(s => new DocxTableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: formatDate(financialConfig.receiptDate) })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Thu tiền học tháng ${financialConfig.period.split(' ')[1] || ''} HS ${s.name} Lớp ${s.grade}` })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (s.fee || financialConfig.feePerSession).toLocaleString() })] })] }),
-                ],
-              })),
+              ...activeStudents.map(s => {
+                const cleanGrade = String(s.grade || '').replace(/^Lớp\s+/i, '');
+                return new DocxTableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: formatDate(financialConfig.receiptDate), size: 26 })] })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Thu tiền học ${financialConfig.period} - HS ${s.name} - Lớp ${cleanGrade}`, size: 26 })] })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (s.fee || financialConfig.feePerSession).toLocaleString(), size: 26 })] })] }),
+                  ],
+                });
+              }),
               ...expenditures.map(e => new DocxTableRow({
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: formatDate(e.date) })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Chi: ${e.description}` })] })] }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `(${e.amount.toLocaleString()})` })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: formatDate(e.date), size: 26 })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Chi: ${e.description} - Người nhận: ${e.recipient}`, size: 26 })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `(${e.amount.toLocaleString()})`, size: 26 })] })] }),
                 ],
               })),
               new DocxTableRow({
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "TỔNG CỘNG", bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 2 }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: netTotal.toLocaleString(), bold: true })], alignment: AlignmentType.CENTER })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "TỔNG CỘNG", bold: true, size: 26 })], alignment: AlignmentType.RIGHT })], columnSpan: 2 }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: netTotal.toLocaleString(), bold: true, size: 26 })], alignment: AlignmentType.CENTER })] }),
                 ],
               }),
             ],
@@ -677,24 +1141,24 @@ export default function App() {
                     children: [
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: `Ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}`, italics: true })],
+                        children: [new TextRun({ text: getLastDayOfMonth(financialConfig.month), italics: true, size: 26 })],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH", bold: true })],
+                        children: [new TextRun({ text: "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH", bold: true, size: 26 })],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
                         children: [new TextRun({ text: "(Ký, ghi rõ họ tên, đóng dấu)", italics: true, size: 18 })],
                       }),
-                      new Paragraph({ text: "", spacing: { before: 800 } }),
+                      new Paragraph({ text: "", spacing: { before: 1800 } }),
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: hkdConfig.owner.toUpperCase(), bold: true })],
+                        children: [new TextRun({ text: hkdConfig.owner.toUpperCase(), bold: true, size: 18 })],
                       }),
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "Chủ hộ kinh doanh", italics: true })],
+                        children: [new TextRun({ text: "Chủ hộ kinh doanh", italics: true, size: 18 })],
                       }),
                     ],
                   }),
@@ -708,12 +1172,15 @@ export default function App() {
 
     // 2. Phiếu thu (2 phiếu trên 1 trang A4)
     if (mode === 'all' || mode === 'receipts') {
-      for (let i = 0; i < students.length; i += 2) {
-        const pair = students.slice(i, i + 2);
+      for (let i = 0; i < activeStudents.length; i += 2) {
+        const pair = activeStudents.slice(i, i + 2);
         const children: any[] = [];
 
         pair.forEach((s, idx) => {
           const amount = s.fee || financialConfig.feePerSession;
+          const dateParts = financialConfig.receiptDate.split('-');
+          const receiptNo = `${dateParts[2]}${dateParts[1]}${dateParts[0].slice(2)}-${String(i + idx + 1).padStart(3, '0')}`;
+          
           children.push(
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
@@ -733,14 +1200,14 @@ export default function App() {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "HỘ, CÁ NHÂN KINH DOANH: ", bold: true }),
-                            new TextRun({ text: hkdConfig.name.toUpperCase() }),
+                            new TextRun({ text: "HỘ, CÁ NHÂN KINH DOANH: ", bold: true, size: 26 }),
+                            new TextRun({ text: hkdConfig.name.toUpperCase(), size: 26 }),
                           ],
                         }),
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Địa chỉ: ", bold: true }),
-                            new TextRun({ text: hkdConfig.address }),
+                            new TextRun({ text: "Địa chỉ: ", bold: true, size: 26 }),
+                            new TextRun({ text: hkdConfig.address, size: 26 }),
                           ],
                         }),
                       ],
@@ -750,7 +1217,7 @@ export default function App() {
                       children: [
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
-                          children: [new TextRun({ text: "Mẫu số 01 – TT", bold: true })],
+                          children: [new TextRun({ text: "Mẫu số 01 – TT", bold: true, size: 26 })],
                         }),
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
@@ -789,33 +1256,33 @@ export default function App() {
                         }),
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
-                          children: [new TextRun({ text: `Ngày ${financialConfig.receiptDate.split('-')[2]} tháng ${financialConfig.receiptDate.split('-')[1]} năm ${financialConfig.receiptDate.split('-')[0]}`, italics: true })],
+                          children: [new TextRun({ text: `Ngày ${dateParts[2]} tháng ${dateParts[1]} năm ${dateParts[0]}`, italics: true, size: 26 })],
                         }),
                       ],
                     }),
                     new TableCell({
                       width: { size: 30, type: WidthType.PERCENTAGE },
                       children: [
-                        new Paragraph({ children: [new TextRun({ text: "Quyển số: ............." })] }),
-                        new Paragraph({ children: [new TextRun({ text: "Số: ........................" })] }),
+                        new Paragraph({ children: [new TextRun({ text: "Quyển số: .............", size: 26 })] }),
+                        new Paragraph({ children: [new TextRun({ text: `Số: ${receiptNo}`, size: 26 })] }),
                       ],
                     }),
                   ],
                 }),
               ],
             }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
-            new Paragraph({ children: [new TextRun({ text: `Họ và tên người nộp tiền: ${s.name}` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Địa chỉ: ${s.school || "................................................................"}` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Lý do nộp: Thu học phí ${financialConfig.period}` })] }),
+            new Paragraph({ text: "", spacing: { after: 100 } }),
+            new Paragraph({ children: [new TextRun({ text: `Họ và tên người nộp tiền: ${s.name}`, size: 26 })] }),
+            new Paragraph({ children: [new TextRun({ text: `Lớp: ${String(s.grade || '').replace(/Lớp\s*/gi, '')}`, size: 26 })] }),
+            new Paragraph({ children: [new TextRun({ text: `Lý do nộp: Thu học phí ${financialConfig.period}`, size: 26 })] }),
             new Paragraph({
               children: [
-                new TextRun({ text: `Số tiền: ${amount.toLocaleString()} VNĐ ` }),
-                new TextRun({ text: `(Viết bằng chữ): ${numberToVietnameseWords(amount)}`, italics: true }),
+                new TextRun({ text: `Số tiền: ${amount.toLocaleString()} VNĐ `, size: 26 }),
+                new TextRun({ text: `(Viết bằng chữ): ${numberToVietnameseWords(amount)}`, italics: true, size: 26 }),
               ],
             }),
-            new Paragraph({ children: [new TextRun({ text: "Kèm theo: ...................................................................... Chứng từ gốc: ................................." })] }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
+            new Paragraph({ children: [new TextRun({ text: `Kèm theo: Bảng chấm công và thu tiền tháng ${financialConfig.period.split(' ')[1] || ''}`, size: 26 })] }),
+            new Paragraph({ text: "", spacing: { after: 100 } }),
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
               borders: {
@@ -829,10 +1296,10 @@ export default function App() {
               rows: [
                 new DocxTableRow({
                   children: [
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH", bold: true })], alignment: AlignmentType.CENTER })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI LẬP BIỂU", bold: true })], alignment: AlignmentType.CENTER })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI NỘP TIỀN", bold: true })], alignment: AlignmentType.CENTER })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "THỦ QUỸ", bold: true })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH/ CÁ NHÂN KINH DOANH", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI LẬP BIỂU", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI NỘP TIỀN", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "THỦ QUỸ", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
                   ],
                 }),
                 new DocxTableRow({
@@ -845,26 +1312,26 @@ export default function App() {
                 }),
                 new DocxTableRow({
                   children: [
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: hkdConfig.owner.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: financialConfig.reporter.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: s.name.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: financialConfig.treasurer.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
                   ],
                 }),
               ],
             }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
-            new Paragraph({ children: [new TextRun({ text: `Đã nhận đủ số tiền (viết bằng chữ): ${numberToVietnameseWords(amount)}`, italics: true })] })
+            new Paragraph({ text: "", spacing: { after: 100 } }),
+            new Paragraph({ children: [new TextRun({ text: `Đã nhận đủ số tiền (viết bằng chữ): ${numberToVietnameseWords(amount)}`, italics: true, size: 26 })] })
           );
 
           if (idx === 0 && pair.length > 1) {
             children.push(
-              new Paragraph({ text: "", spacing: { before: 200, after: 200 } }),
+              new Paragraph({ text: "", spacing: { before: 50, after: 50 } }),
               new Paragraph({
                 border: { bottom: { color: "auto", space: 1, style: BorderStyle.DASHED, size: 6 } },
                 children: [new TextRun({ text: "" })]
               }),
-              new Paragraph({ text: "", spacing: { before: 200, after: 200 } })
+              new Paragraph({ text: "", spacing: { before: 50, after: 50 } })
             );
           }
         });
@@ -887,6 +1354,9 @@ export default function App() {
         const children: any[] = [];
 
         pair.forEach((e, idx) => {
+          const dateParts = e.date.split('-');
+          const voucherNo = `${dateParts[2]}${dateParts[1]}${dateParts[0].slice(2)}-${String(i + idx + 1).padStart(3, '0')}`;
+          
           children.push(
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
@@ -906,14 +1376,14 @@ export default function App() {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "HỘ, CÁ NHÂN KINH DOANH: ", bold: true }),
-                            new TextRun({ text: hkdConfig.name.toUpperCase() }),
+                            new TextRun({ text: "HỘ, CÁ NHÂN KINH DOANH: ", bold: true, size: 26 }),
+                            new TextRun({ text: hkdConfig.name.toUpperCase(), size: 26 }),
                           ],
                         }),
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "Địa chỉ: ", bold: true }),
-                            new TextRun({ text: hkdConfig.address }),
+                            new TextRun({ text: "Địa chỉ: ", bold: true, size: 26 }),
+                            new TextRun({ text: hkdConfig.address, size: 26 }),
                           ],
                         }),
                       ],
@@ -923,7 +1393,7 @@ export default function App() {
                       children: [
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
-                          children: [new TextRun({ text: "Mẫu số 02 – TT", bold: true })],
+                          children: [new TextRun({ text: "Mẫu số 02 – TT", bold: true, size: 26 })],
                         }),
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
@@ -962,33 +1432,33 @@ export default function App() {
                         }),
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
-                          children: [new TextRun({ text: `Ngày ${e.date.split('-')[2]} tháng ${e.date.split('-')[1]} năm ${e.date.split('-')[0]}`, italics: true })],
+                          children: [new TextRun({ text: `Ngày ${dateParts[2]} tháng ${dateParts[1]} năm ${dateParts[0]}`, italics: true, size: 26 })],
                         }),
                       ],
                     }),
                     new TableCell({
                       width: { size: 30, type: WidthType.PERCENTAGE },
                       children: [
-                        new Paragraph({ children: [new TextRun({ text: "Quyển số: ............." })] }),
-                        new Paragraph({ children: [new TextRun({ text: "Số: ........................" })] }),
+                        new Paragraph({ children: [new TextRun({ text: "Quyển số: .............", size: 26 })] }),
+                        new Paragraph({ children: [new TextRun({ text: `Số: ${voucherNo}`, size: 26 })] }),
                       ],
                     }),
                   ],
                 }),
               ],
             }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
-            new Paragraph({ children: [new TextRun({ text: `Họ và tên người nhận tiền: ................................................................................` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Địa chỉ: ............................................................................................................` })] }),
-            new Paragraph({ children: [new TextRun({ text: `Lý do chi: ${e.description}` })] }),
+            new Paragraph({ text: "", spacing: { after: 100 } }),
+            new Paragraph({ children: [new TextRun({ text: `Họ và tên người nhận tiền: ${e.recipient || '................................................................................'}`, size: 26 })] }),
+            new Paragraph({ children: [new TextRun({ text: `Địa chỉ: ${e.recipientAddress || '............................................................................................................'}`, size: 26 })] }),
+            new Paragraph({ children: [new TextRun({ text: `Lý do chi: ${e.description}`, size: 26 })] }),
             new Paragraph({
               children: [
-                new TextRun({ text: `Số tiền: ${e.amount.toLocaleString()} VNĐ ` }),
-                new TextRun({ text: `(Viết bằng chữ): ${numberToVietnameseWords(e.amount)}`, italics: true }),
+                new TextRun({ text: `Số tiền: ${e.amount.toLocaleString()} VNĐ `, size: 26 }),
+                new TextRun({ text: `(Viết bằng chữ): ${numberToVietnameseWords(e.amount)}`, italics: true, size: 26 }),
               ],
             }),
-            new Paragraph({ children: [new TextRun({ text: "Kèm theo: ...................................................................... Chứng từ gốc: ................................." })] }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
+            new Paragraph({ children: [new TextRun({ text: `Kèm theo: Bảng chấm công và thu tiền tháng ${financialConfig.period.split(' ')[1] || ''}`, size: 26 })] }),
+            new Paragraph({ text: "", spacing: { after: 100 } }),
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
               borders: {
@@ -1002,10 +1472,10 @@ export default function App() {
               rows: [
                 new DocxTableRow({
                   children: [
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH", bold: true })], alignment: AlignmentType.CENTER })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI LẬP BIỂU", bold: true })], alignment: AlignmentType.CENTER })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI NHẬN TIỀN", bold: true })], alignment: AlignmentType.CENTER })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "THỦ QUỸ", bold: true })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH/ CÁ NHÂN KINH DOANH", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI LẬP BIỂU", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "NGƯỜI NHẬN TIỀN", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "THỦ QUỸ", bold: true, size: 22 })], alignment: AlignmentType.CENTER })] }),
                   ],
                 }),
                 new DocxTableRow({
@@ -1018,26 +1488,26 @@ export default function App() {
                 }),
                 new DocxTableRow({
                   children: [
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
-                    new TableCell({ children: [new Paragraph({ text: "", spacing: { before: 800 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: hkdConfig.owner.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: financialConfig.reporter.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (e.recipient || "................................").toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
+                    new TableCell({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: financialConfig.treasurer.toUpperCase(), bold: true, size: 18 })], spacing: { before: 1000 } })] }),
                   ],
                 }),
               ],
             }),
-            new Paragraph({ text: "", spacing: { after: 200 } }),
-            new Paragraph({ children: [new TextRun({ text: `Đã nhận đủ số tiền (viết bằng chữ): ${numberToVietnameseWords(e.amount)}`, italics: true })] })
+            new Paragraph({ text: "", spacing: { after: 100 } }),
+            new Paragraph({ children: [new TextRun({ text: `Đã nhận đủ số tiền (viết bằng chữ): ${numberToVietnameseWords(e.amount)}`, italics: true, size: 26 })] })
           );
 
           if (idx === 0 && pair.length > 1) {
             children.push(
-              new Paragraph({ text: "", spacing: { before: 200, after: 200 } }),
+              new Paragraph({ text: "", spacing: { before: 50, after: 50 } }),
               new Paragraph({
                 border: { bottom: { color: "auto", space: 1, style: BorderStyle.DASHED, size: 6 } },
                 children: [new TextRun({ text: "" })]
               }),
-              new Paragraph({ text: "", spacing: { before: 200, after: 200 } })
+              new Paragraph({ text: "", spacing: { before: 50, after: 50 } })
             );
           }
         });
@@ -1071,15 +1541,17 @@ export default function App() {
   const [journalData, setJournalData] = useState<TableRow[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [financeSubTab, setFinanceSubTab] = useState<'config' | 'revenue' | 'receipts'>('config');
-  const [expenditures, setExpenditures] = useState<{id: string, date: string, description: string, amount: number}[]>([]);
+  const [confirmDeleteGrade, setConfirmDeleteGrade] = useState<number | null>(null);
+  const [confirmDeleteFinance, setConfirmDeleteFinance] = useState(false);
+  const [financeSubTab, setFinanceSubTab] = useState<'config' | 'data' | 'revenue' | 'receipts'>('config');
+  const [expenditures, setExpenditures] = useState<{id: string, date: string, description: string, amount: number, recipient: string, recipientAddress: string}[]>([]);
   const [financialConfig, setFinancialConfig] = useState({ 
     feePerSession: 100000, 
     month: '03/2026',
     receiptDate: new Date().toISOString().split('T')[0],
     voucherDate: new Date().toISOString().split('T')[0],
     period: 'Tháng 03/2026',
-    accountant: '',
+    reporter: '',
     treasurer: ''
   });
   const [showFinanceConfig, setShowFinanceConfig] = useState(false);
@@ -1089,8 +1561,22 @@ export default function App() {
   const [isExpenditureFileUploaded, setIsExpenditureFileUploaded] = useState(false);
   const [showFinanceExport, setShowFinanceExport] = useState(false);
   const [showStudentActions, setShowStudentActions] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
+  const [loginUsername, setLoginUsername] = useState('admin');
+  const [loginPassword, setLoginPassword] = useState('123456');
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [newAccount, setNewAccount] = useState<Partial<UserAccount>>({
+    username: '',
+    password: '',
+    role: 'Giáo viên',
+    expiry: '',
+    maxDevices: 1
+  });
+
+  const activeStudentsCount = students.filter(s => (s.fee ?? financialConfig.feePerSession) > 0).length;
+  const revenue = students.reduce((sum, s) => sum + (s.fee ?? financialConfig.feePerSession), 0);
 
   const moveRow = (type: 'schedule' | 'journal', id: string, direction: 'up' | 'down') => {
     const setter = type === 'schedule' ? setScheduleData : setJournalData;
@@ -1117,6 +1603,64 @@ export default function App() {
       [newArr[index], newArr[targetIndex]] = [newArr[targetIndex], newArr[index]];
       return newArr;
     });
+  };
+
+  const addAccount = () => {
+    if (!newAccount.username || !newAccount.password) {
+      alert('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
+      return;
+    }
+    const account: UserAccount = {
+      id: crypto.randomUUID(),
+      index: userAccounts.length + 1,
+      username: newAccount.username!,
+      password: newAccount.password!,
+      role: newAccount.role || 'Giáo viên',
+      expiry: newAccount.expiry || '',
+      maxDevices: newAccount.maxDevices || 1
+    };
+    setUserAccounts(prev => [...prev, account]);
+    setNewAccount({
+      username: '',
+      password: '',
+      role: 'Giáo viên',
+      expiry: '',
+      maxDevices: 1
+    });
+  };
+
+  const deleteAccount = (id: string) => {
+    if (confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) {
+      setUserAccounts(prev => prev.filter(acc => acc.id !== id));
+    }
+  };
+
+  const saveAccountsToGoogleSheets = async () => {
+    if (!hkdConfig.scriptUrl) {
+      alert('Vui lòng cấu hình Google Script URL trong phần Cấu hình HKD!');
+      return;
+    }
+    try {
+      setIsAnalyzing(true);
+      const payload = {
+        accounts: userAccounts
+      };
+      const response = await fetch(hkdConfig.scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const result = await response.text();
+      if (result === 'Success') {
+        alert('Đã lưu danh sách tài khoản lên Google Sheets thành công!');
+      } else {
+        alert('Lỗi: ' + result);
+      }
+    } catch (error) {
+      console.error('Save accounts error:', error);
+      alert('Lỗi khi lưu dữ liệu. Vui lòng kiểm tra lại Script URL và quyền truy cập.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const saveConfig = () => {
@@ -1543,6 +2087,7 @@ export default function App() {
     const savedJournalMeta = localStorage.getItem('journal_meta');
     const savedPrograms = localStorage.getItem('teaching_programs');
     const savedKHDH = localStorage.getItem('khdh_data');
+    const savedAccounts = localStorage.getItem('user_accounts');
     
     if (savedSchedule) setScheduleData(JSON.parse(savedSchedule));
     if (savedJournal) setJournalData(JSON.parse(savedJournal));
@@ -1551,6 +2096,7 @@ export default function App() {
     if (savedJournalMeta) setJournalMeta(JSON.parse(savedJournalMeta));
     if (savedPrograms) setTeachingPrograms(JSON.parse(savedPrograms));
     if (savedKHDH) setKhdhData(JSON.parse(savedKHDH));
+    if (savedAccounts) setUserAccounts(JSON.parse(savedAccounts));
   }, []);
 
   useEffect(() => {
@@ -1560,12 +2106,80 @@ export default function App() {
     localStorage.setItem('schedule_meta', JSON.stringify(scheduleMeta));
     localStorage.setItem('journal_meta', JSON.stringify(journalMeta));
     localStorage.setItem('teaching_programs', JSON.stringify(teachingPrograms));
-  }, [scheduleData, journalData, students, scheduleMeta, journalMeta, teachingPrograms]);
+    localStorage.setItem('user_accounts', JSON.stringify(userAccounts));
+  }, [scheduleData, journalData, students, scheduleMeta, journalMeta, teachingPrograms, userAccounts]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoggedIn(true);
-    setActiveTab('config_hkd');
+    
+    // 1. Check against local userAccounts or default admin
+    const account = userAccounts.find(u => u.username === loginUsername && u.password === loginPassword);
+    
+    if (account) {
+      if (account.expiry && new Date(account.expiry) < new Date()) {
+        alert('Tài khoản đã hết hạn sử dụng!');
+        return;
+      }
+      setCurrentUser(account);
+      setIsAdmin(account.role === 'Quản trị viên');
+      setIsLoggedIn(true);
+      setActiveTab('dashboard');
+      return;
+    } else if (loginUsername === 'admin' && loginPassword === '123456') {
+      const adminUser = {
+        id: 'admin',
+        index: 0,
+        username: 'admin',
+        password: '123456',
+        role: 'Quản trị viên',
+        expiry: '',
+        maxDevices: 999
+      };
+      setCurrentUser(adminUser);
+      setIsAdmin(true);
+      setIsLoggedIn(true);
+      setActiveTab('dashboard');
+      return;
+    }
+
+    // 2. Try live login via Google Script
+    if (hkdConfig.scriptUrl) {
+      try {
+        setIsAnalyzing(true);
+        const url = `${hkdConfig.scriptUrl}?action=login&username=${encodeURIComponent(loginUsername)}&password=${encodeURIComponent(loginPassword)}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+          const liveUser = data.user;
+          if (liveUser.expiry && new Date(liveUser.expiry) < new Date()) {
+            alert('Tài khoản đã hết hạn sử dụng!');
+            return;
+          }
+          setCurrentUser(liveUser);
+          setIsAdmin(liveUser.role === 'Quản trị viên');
+          setIsLoggedIn(true);
+          setActiveTab('dashboard');
+          
+          // Update local accounts
+          const updatedAccounts = [...userAccounts];
+          const idx = updatedAccounts.findIndex(u => u.username === liveUser.username);
+          if (idx !== -1) updatedAccounts[idx] = liveUser;
+          else updatedAccounts.push(liveUser);
+          setUserAccounts(updatedAccounts);
+          localStorage.setItem('user_accounts', JSON.stringify(updatedAccounts));
+        } else {
+          alert('Tài khoản hoặc mật khẩu không chính xác!');
+        }
+      } catch (error) {
+        console.error('Live login error:', error);
+        alert('Lỗi khi kết nối đến máy chủ. Vui lòng thử lại sau.');
+      } finally {
+        setIsAnalyzing(false);
+      }
+    } else {
+      alert('Tài khoản hoặc mật khẩu không chính xác!');
+    }
   };
 
   if (!isLoggedIn) {
@@ -1581,23 +2195,67 @@ export default function App() {
               <GraduationCap className="text-white w-10 h-10" />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-slate-800">Cơ sở giáo dục Hoàng Gia</h1>
-              <p className="text-slate-500">Hệ thống quản lý nội bộ</p>
+              <h1 className="text-2xl font-bold text-slate-900">Cơ sở giáo dục Hoàng Gia</h1>
+              <p className="text-slate-600 font-medium">Hệ thống quản lý nội bộ</p>
             </div>
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-semibold text-slate-700">Tài khoản</label>
-              <input type="text" defaultValue="admin" className="p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none" />
+              <label className="text-sm font-bold text-slate-800">Tài khoản</label>
+              <input 
+                type="text" 
+                value={loginUsername} 
+                onChange={(e) => setLoginUsername(e.target.value)}
+                className="p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none text-slate-900" 
+              />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-semibold text-slate-700">Mật khẩu</label>
-              <input type="password" defaultValue="123456" className="p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none" />
+              <label className="text-sm font-bold text-slate-800">Mật khẩu</label>
+              <input 
+                type="password" 
+                value={loginPassword} 
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none text-slate-900" 
+              />
             </div>
             <button type="submit" className="mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
               <LogIn size={20} />
               Đăng nhập hệ thống
+            </button>
+            <button 
+              type="button"
+              onClick={fetchKHDHData}
+              className="mt-2 text-indigo-600 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"
+            >
+              <RefreshCw size={14} />
+              Đồng bộ tài khoản từ Google Sheets
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                const pwd = prompt('Vui lòng nhập mật khẩu quản trị:');
+                if (pwd === '123456') {
+                  setCurrentUser({
+                    id: 'admin',
+                    index: 0,
+                    username: 'admin',
+                    password: '123456',
+                    role: 'Quản trị viên',
+                    expiry: '',
+                    maxDevices: 999
+                  });
+                  setIsAdmin(true);
+                  setIsLoggedIn(true);
+                  setActiveTab('accounts');
+                } else if (pwd !== null) {
+                  alert('Mật khẩu không chính xác!');
+                }
+              }}
+              className="mt-2 text-rose-600 text-xs font-bold hover:underline flex items-center justify-center gap-1 mx-auto"
+            >
+              <ShieldCheck size={14} />
+              Quản lý tài khoản (Admin)
             </button>
           </form>
         </motion.div>
@@ -1605,77 +2263,102 @@ export default function App() {
     );
   }
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setIsAdmin(false);
+    setActiveTab('login');
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans">
-      <aside className="w-full md:w-72 bg-white border-r border-slate-200 p-6 flex flex-col gap-8 z-20">
-        <div className="flex items-center gap-3 px-2">
-          <div className="bg-indigo-600 p-2 rounded-lg">
-            <GraduationCap className="text-white w-6 h-6" />
-          </div>
-          <span className="font-bold text-lg text-slate-800 tracking-tight">Hoàng Gia Edu</span>
-        </div>
-
-        <nav className="flex flex-col gap-1">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-3">Menu chính</p>
-          <NavItem active={activeTab === 'config_hkd'} onClick={() => setActiveTab('config_hkd')} icon={<Settings size={20} />} label="Cấu hình HKD" />
-          <NavItem 
-            active={activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config'} 
-            onClick={() => setActiveTab('program')} 
-            icon={<ClipboardList size={20} />} 
-            label="Chương trình dạy học" 
-          />
-          <NavItem active={activeTab === 'students'} onClick={() => setActiveTab('students')} icon={<Users size={20} />} label="Quản lý học sinh" />
-          <NavItem active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon={<DollarSign size={20} />} label="Quản lý tài chính" />
-        </nav>
-
-        <div className="mt-auto bg-slate-50 p-4 rounded-2xl border border-slate-100">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-8">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-100 p-2 rounded-full">
-              <User className="text-indigo-600 w-5 h-5" />
+            <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-100">
+              <GraduationCap className="text-white w-6 h-6" />
             </div>
-            <div>
-              <p className="text-sm font-bold text-slate-800">{scheduleMeta.teacher}</p>
-              <p className="text-xs text-slate-500">Quản trị viên</p>
+            <span className="font-black text-xl text-slate-800 tracking-tight font-display uppercase">Hoàng Gia</span>
+          </div>
+
+          <nav className="hidden lg:flex items-center gap-1">
+            <button onClick={() => setActiveTab('dashboard')} className={`nav-link ${activeTab === 'dashboard' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+              <Home size={18} /> Trang chủ
+            </button>
+            <button onClick={() => setActiveTab('students')} className={`nav-link ${activeTab === 'students' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+              <Users size={18} /> Học sinh
+            </button>
+            <button onClick={() => setActiveTab('program')} className={`nav-link ${activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+              <ClipboardList size={18} /> Chương trình
+            </button>
+            <button onClick={() => setActiveTab('finance')} className={`nav-link ${activeTab === 'finance' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+              <DollarSign size={18} /> Tài chính
+            </button>
+            <button onClick={() => setActiveTab('reports')} className={`nav-link ${activeTab === 'reports' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+              <BarChart3 size={18} /> Báo cáo
+            </button>
+            <button onClick={() => setActiveTab('config_hkd')} className={`nav-link ${activeTab === 'config_hkd' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+              <Settings size={18} /> Tùy chỉnh
+            </button>
+            {isAdmin && (
+              <button onClick={() => setActiveTab('accounts')} className={`nav-link ${activeTab === 'accounts' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+                <ShieldCheck size={18} /> Tài khoản
+              </button>
+            )}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors relative">
+            <Bell size={20} />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+          </button>
+          
+          <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
+          <div className="flex items-center gap-3 group cursor-pointer relative">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-black text-slate-900 leading-none">{currentUser?.username}</p>
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-wider mt-1">{currentUser?.role}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">
+              {currentUser?.username?.charAt(0).toUpperCase()}
+            </div>
+            <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors" />
+
+            {/* Dropdown */}
+            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2">
+              <button className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+                <User size={16} /> Thông tin
+              </button>
+              <button onClick={handleLogout} className="w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2">
+                <LogOut size={16} /> Đăng xuất
+              </button>
             </div>
           </div>
         </div>
-      </aside>
+      </header>
 
-      <main className="flex-1 p-4 md:p-10 overflow-y-auto">
-        {(activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config') && (
-          <div className="mb-8 flex flex-wrap gap-2 p-1.5 bg-slate-200/50 rounded-2xl w-fit">
-            <button 
-              onClick={() => setActiveTab('program')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'program' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <ClipboardList size={18} />
-              Quản lý chương trình
-            </button>
-            <button 
-              onClick={() => setActiveTab('subject_config')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'subject_config' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Settings size={18} />
-              Cấu hình môn học
-            </button>
-            <button 
-              onClick={() => setActiveTab('schedule')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'schedule' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Calendar size={18} />
-              Lịch báo giảng
-            </button>
-            <button 
-              onClick={() => setActiveTab('journal')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'journal' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <FileText size={18} />
-              Sổ đầu bài
-            </button>
-          </div>
-        )}
-
+      <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
         <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <Dashboard 
+              studentsCount={students.length}
+              activeStudentsCount={activeStudentsCount}
+              revenue={revenue}
+              setActiveTab={setActiveTab}
+              currentUser={currentUser}
+            />
+          )}
+          {activeTab === 'reports' && (
+            <Reports 
+              students={students}
+              financialConfig={financialConfig}
+              expenditures={expenditures}
+            />
+          )}
+
           {activeTab === 'config_hkd' && (
             <motion.div key="hkd" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl flex flex-col gap-8">
               <div>
@@ -1720,7 +2403,7 @@ export default function App() {
                 </div>
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                    <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
                       <tr>
                         <th className="p-4 w-24">Khối lớp</th>
                         <th className="p-4">Môn học</th>
@@ -1889,6 +2572,22 @@ export default function App() {
                         <Save className="text-slate-400 group-hover:text-emerald-600" size={20} />
                         <span className="text-xs font-bold text-slate-600 group-hover:text-emerald-700 text-center">Đồng bộ Sheets thủ công</span>
                       </button>
+                      <button 
+                        onClick={() => {
+                          if (confirmDeleteGrade === grade) {
+                            deleteProgramForGrade(grade);
+                          } else {
+                            setConfirmDeleteGrade(grade);
+                            setTimeout(() => setConfirmDeleteGrade(null), 5000);
+                          }
+                        }}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all group ${confirmDeleteGrade === grade ? 'bg-rose-600 border-rose-600 text-white' : 'bg-slate-50 border-slate-100 hover:bg-rose-50 hover:border-rose-100'}`}
+                      >
+                        <Trash2 className={confirmDeleteGrade === grade ? 'text-white' : 'text-slate-400 group-hover:text-rose-600'} size={20} />
+                        <span className={`text-xs font-bold ${confirmDeleteGrade === grade ? 'text-white' : 'text-slate-600 group-hover:text-rose-700'} text-center`}>
+                          {confirmDeleteGrade === grade ? 'Đồng ý xóa' : 'Xóa chương trình'}
+                        </span>
+                      </button>
                     </div>
 
                     <div className="mt-4 border-t border-slate-100 pt-4">
@@ -1985,7 +2684,7 @@ export default function App() {
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left min-w-[1200px] border-collapse">
-                    <thead className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider font-bold border-y border-slate-100">
+                    <thead className="bg-slate-50 text-slate-700 text-[10px] uppercase tracking-wider font-black border-y border-slate-200">
                       <tr>
                         <th className="p-4 w-32">Thứ ngày</th>
                         <th className="p-4 w-48">Ca học / Buổi</th>
@@ -2165,7 +2864,7 @@ export default function App() {
                       </div>
                       <div className="text-left">
                         <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-700">Tải mẫu Excel</p>
-                        <p className="text-xs text-slate-500">Tải file mẫu để nhập danh sách</p>
+                        <p className="text-xs text-slate-700 font-medium">Tải file mẫu để nhập danh sách</p>
                       </div>
                     </button>
                     <label className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:bg-indigo-50 hover:border-indigo-100 transition-all group shadow-sm cursor-pointer">
@@ -2176,7 +2875,7 @@ export default function App() {
                         <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-700">
                           {isAnalyzing ? 'Đang phân tích AI...' : 'Tải lên danh sách học sinh'}
                         </p>
-                        <p className="text-xs text-slate-500">Tải lên file Excel danh sách học sinh</p>
+                        <p className="text-xs text-slate-700 font-medium">Tải lên file Excel danh sách học sinh</p>
                       </div>
                       <input 
                         type="file" 
@@ -2205,7 +2904,7 @@ export default function App() {
                   <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
                           <tr>
                             <th className="p-4">Họ và tên</th>
                             <th className="p-4">Lớp</th>
@@ -2272,7 +2971,7 @@ export default function App() {
                           setConfirmDelete(false);
                         } else {
                           setConfirmDelete(true);
-                          setTimeout(() => setConfirmDelete(false), 3000); // Reset after 3s
+                          setTimeout(() => setConfirmDelete(false), 5000); // Reset after 5s
                         }
                       }}
                       className={`flex items-center gap-3 p-4 rounded-2xl border transition-all group shadow-sm ${confirmDelete ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-200 hover:bg-rose-50 hover:border-rose-100'}`}
@@ -2303,7 +3002,7 @@ export default function App() {
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
+                        <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
                           <tr>
                             <th className="p-4">Họ và tên</th>
                             <th className="p-4">Lớp</th>
@@ -2351,7 +3050,14 @@ export default function App() {
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeSubTab === 'config' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     <Settings size={16} />
-                    Cấu hình & Dữ liệu
+                    Cấu hình
+                  </button>
+                  <button 
+                    onClick={() => setFinanceSubTab('data')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${financeSubTab === 'data' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    <ClipboardList size={16} />
+                    Dữ liệu
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('revenue')}
@@ -2400,10 +3106,10 @@ export default function App() {
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <InputGroup 
-                          label="Kế toán" 
-                          value={financialConfig.accountant} 
-                          onChange={v => setFinancialConfig({...financialConfig, accountant: v})} 
-                          placeholder="Tên kế toán..." 
+                          label="Người lập biểu" 
+                          value={financialConfig.reporter} 
+                          onChange={v => setFinancialConfig({...financialConfig, reporter: v})} 
+                          placeholder="Tên người lập biểu..." 
                         />
                         <InputGroup 
                           label="Thủ quỹ" 
@@ -2461,8 +3167,13 @@ export default function App() {
                                       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
                                       const prompt = `
                                         Phân tích bảng chấm công và thu tiền sau đây. 
-                                        Trích xuất danh sách học sinh bao gồm: Tên (HỌ VÀ TÊN), Lớp, và Tổng tiền thu.
-                                        Yêu cầu trả về một mảng JSON các đối tượng với các khóa: name, grade, totalFee.
+                                        Trích xuất danh sách học sinh bao gồm: Tên (HỌ VÀ TÊN), Lớp (chỉ lấy phần số hoặc tên lớp, ví dụ "6A" thay vì "Lớp 6A"), và Tổng tiền thu.
+                                        YÊU CẦU CỰC KỲ QUAN TRỌNG: 
+                                        - TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ Ý SÁNG TẠO NỘI DUNG. 
+                                        - CHỈ TRÍCH XUẤT DỮ LIỆU CÓ THỰC TRONG BẢNG.
+                                        - KHÔNG ĐƯỢC THÊM HỌC SINH NẾU KHÔNG CÓ TRONG DANH SÁCH.
+                                        - Nếu không có dữ liệu cho một trường, hãy để trống.
+                                        - Trả về một mảng JSON các đối tượng với các khóa: name, grade, totalFee.
                                         Dữ liệu: ${JSON.stringify(jsonData.slice(0, 50))}
                                       `;
                                       const response = await ai.models.generateContent({
@@ -2486,7 +3197,8 @@ export default function App() {
                                         setStudents(mapped);
                                         setUploadedFinanceFiles(prev => prev + 1);
                                         setIsRevenueFileUploaded(true);
-                                        alert(`AI đã phân tích thành công ${mapped.length} học sinh từ bảng chấm công theo mẫu.`);
+                                        setFinanceSubTab('data');
+                                        alert(`AI đã phân tích thành công ${mapped.length} học sinh từ bảng chấm công theo mẫu. Bạn có thể kiểm tra dữ liệu tại tab "Dữ liệu".`);
                                       } else {
                                         alert('AI không thể trích xuất dữ liệu hợp lệ. Vui lòng kiểm tra lại định dạng file.');
                                       }
@@ -2518,7 +3230,8 @@ export default function App() {
                                         setStudents(manualMapped);
                                         setUploadedFinanceFiles(prev => prev + 1);
                                         setIsRevenueFileUploaded(true);
-                                        alert(`Đã trích xuất thủ công ${manualMapped.length} học sinh từ bảng chấm công.`);
+                                        setFinanceSubTab('data');
+                                        alert(`Đã trích xuất thủ công ${manualMapped.length} học sinh từ bảng chấm công. Bạn có thể kiểm tra dữ liệu tại tab "Dữ liệu".`);
                                       }
                                     } finally {
                                       setIsAnalyzing(false);
@@ -2530,9 +3243,9 @@ export default function App() {
                             />
                           </label>
                           {isRevenueFileUploaded && (
-                            <div className="mt-2 flex items-center gap-2 text-indigo-600 text-xs font-bold justify-center">
+                            <div className="mt-2 flex items-center gap-2 text-indigo-600 text-xs font-bold justify-center bg-indigo-50 py-2 rounded-xl border border-indigo-100">
                               <CheckCircle size={14} />
-                              Đã nhận file bảng chấm công
+                              Hệ thống đã nhận file phiếu thu
                             </div>
                           )}
                         </div>
@@ -2553,15 +3266,15 @@ export default function App() {
                                 if (e.target.files?.[0]) {
                                   setUploadedFinanceFiles(prev => prev + 1);
                                   setIsExpenditureFileUploaded(true);
-                                  alert('Đã nhận file bảng chi tiền!');
+                                  alert('Hệ thống đã nhận file phiếu chi!');
                                 }
                               }}
                             />
                           </label>
                           {isExpenditureFileUploaded && (
-                            <div className="mt-2 flex items-center gap-2 text-emerald-600 text-xs font-bold justify-center">
+                            <div className="mt-2 flex items-center gap-2 text-emerald-600 text-xs font-bold justify-center bg-emerald-50 py-2 rounded-xl border border-emerald-100">
                               <CheckCircle size={14} />
-                              Đã nhận file bảng chi tiền
+                              Hệ thống đã nhận file phiếu chi
                             </div>
                           )}
                         </div>
@@ -2575,8 +3288,8 @@ export default function App() {
                                 alert('AI đang phân tích và đồng bộ dữ liệu...');
                                 setTimeout(() => {
                                   // Only use data from uploaded files or manual entry
-                                  setFinanceSubTab('revenue');
-                                  alert('Đồng bộ dữ liệu thành công! Dữ liệu từ bảng chấm công (TT, Họ tên, Địa chỉ, Số tiền) đã được chuyển sang phiếu thu và sổ doanh thu.');
+                                  setFinanceSubTab('data');
+                                  alert('Đồng bộ dữ liệu thành công! Bạn có thể kiểm tra và chỉnh sửa dữ liệu tại tab "Dữ liệu" trước khi xuất sổ.');
                                 }, 1500);
                               }}
                               className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all"
@@ -2585,6 +3298,20 @@ export default function App() {
                               Đồng bộ AI & Phân tích
                             </button>
                           )}
+                          <button 
+                            onClick={() => {
+                              if (confirmDeleteFinance) {
+                                deleteFinanceData();
+                              } else {
+                                setConfirmDeleteFinance(true);
+                                setTimeout(() => setConfirmDeleteFinance(false), 5000);
+                              }
+                            }}
+                            className={`flex items-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all shadow-lg ${confirmDeleteFinance ? 'bg-rose-600 text-white' : 'bg-white text-rose-600 border border-rose-200 hover:bg-rose-50'}`}
+                          >
+                            <Trash2 size={20} />
+                            {confirmDeleteFinance ? 'Đồng ý xóa dữ liệu' : 'Xóa dữ liệu tài chính'}
+                          </button>
                         </div>
                         
                         <button 
@@ -2597,6 +3324,122 @@ export default function App() {
                       </div>
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {financeSubTab === 'data' && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800">Dữ liệu thu tiền học sinh</h3>
+                        <p className="text-sm text-slate-700 font-medium">Kiểm tra và chỉnh sửa thông tin trước khi xuất báo cáo</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => setStudents([...students, { id: Date.now().toString(), name: '', grade: '', school: '', parentName: '', phone: '', subjects: '', registrationDate: new Date().toISOString().split('T')[0], fee: 0 }])}
+                          className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-indigo-100 transition-all"
+                        >
+                          <Plus size={14} /> Thêm học sinh
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50">
+                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider w-16">TT</th>
+                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider">Họ và tên</th>
+                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider">Lớp / Địa chỉ</th>
+                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider">Số tiền thu</th>
+                            <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-wider w-20">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {students.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-12 text-center text-slate-400 italic">
+                                Chưa có dữ liệu học sinh. Vui lòng tải file tại tab "Cấu hình".
+                              </td>
+                            </tr>
+                          ) : (
+                            students.map((s, idx) => (
+                              <tr key={s.id} className="hover:bg-slate-50/50 transition-all">
+                                <td className="p-4 text-sm font-medium text-slate-500">{idx + 1}</td>
+                                <td className="p-2">
+                                  <input 
+                                    type="text" 
+                                    value={s.name} 
+                                    onChange={(e) => {
+                                      const newStudents = [...students];
+                                      newStudents[idx].name = e.target.value;
+                                      setStudents(newStudents);
+                                    }}
+                                    className="w-full p-2 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-lg text-sm transition-all"
+                                    placeholder="Họ tên..."
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    type="text" 
+                                    value={s.grade} 
+                                    onChange={(e) => {
+                                      const newStudents = [...students];
+                                      newStudents[idx].grade = e.target.value;
+                                      setStudents(newStudents);
+                                    }}
+                                    className="w-full p-2 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-lg text-sm transition-all"
+                                    placeholder="Lớp..."
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <div className="relative">
+                                    <input 
+                                      type="number" 
+                                      value={s.fee} 
+                                      onChange={(e) => {
+                                        const newStudents = [...students];
+                                        newStudents[idx].fee = parseInt(e.target.value) || 0;
+                                        setStudents(newStudents);
+                                      }}
+                                      className={`w-full p-2 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-lg text-sm transition-all ${s.fee === 0 ? 'text-rose-500 font-bold' : ''}`}
+                                      placeholder="Số tiền..."
+                                    />
+                                    {s.fee === 0 && (
+                                      <span className="absolute -top-6 left-0 text-[10px] text-rose-500 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 whitespace-nowrap">
+                                        Sẽ không xuất sổ (0đ)
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-4">
+                                  <button 
+                                    onClick={() => setStudents(students.filter(st => st.id !== s.id))}
+                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {students.length > 0 && (
+                      <div className="mt-8 flex justify-end">
+                        <button 
+                          onClick={() => setFinanceSubTab('revenue')}
+                          className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                        >
+                          Tiếp tục xuất sổ
+                          <ArrowRight size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
 
@@ -2618,7 +3461,7 @@ export default function App() {
                       <div className="flex justify-between items-center mb-4">
                         <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Nội dung chi chi tiết</h4>
                         <button 
-                          onClick={() => setExpenditures([...expenditures, { id: Date.now().toString(), date: financialConfig.voucherDate, description: '', amount: 0 }])}
+                          onClick={() => setExpenditures([...expenditures, { id: Date.now().toString(), date: financialConfig.voucherDate, description: '', amount: 0, recipient: '', recipientAddress: '' }])}
                           className="text-indigo-600 text-xs font-bold flex items-center gap-1 hover:underline"
                         >
                           <Plus size={14} /> Thêm nội dung chi
@@ -2627,34 +3470,46 @@ export default function App() {
                       
                       <div className="space-y-3">
                         {expenditures.map((exp, idx) => (
-                          <div key={exp.id} className="flex gap-3 items-end bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                            <div className="flex-1">
+                          <div key={exp.id} className="flex flex-col gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <InputGroup label="Ngày" value={exp.date} onChange={v => {
                                 const newExp = [...expenditures];
                                 newExp[idx].date = v;
                                 setExpenditures(newExp);
-                              }} placeholder="YYYY-MM-DD" />
+                              }} placeholder="YYYY-MM-DD" type="date" />
+                              <InputGroup label="Người nhận tiền" value={exp.recipient} onChange={v => {
+                                const newExp = [...expenditures];
+                                newExp[idx].recipient = v;
+                                setExpenditures(newExp);
+                              }} placeholder="Tên người nhận..." />
+                              <InputGroup label="Địa chỉ người nhận" value={exp.recipientAddress} onChange={v => {
+                                const newExp = [...expenditures];
+                                newExp[idx].recipientAddress = v;
+                                setExpenditures(newExp);
+                              }} placeholder="Địa chỉ..." />
                             </div>
-                            <div className="flex-[2]">
-                              <InputGroup label="Nội dung" value={exp.description} onChange={v => {
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <InputGroup label="Nội dung chi" value={exp.description} onChange={v => {
                                 const newExp = [...expenditures];
                                 newExp[idx].description = v;
                                 setExpenditures(newExp);
                               }} placeholder="Ví dụ: Tiền điện, nước..." />
+                              <div className="flex gap-3 items-end">
+                                <div className="flex-1">
+                                  <InputGroup label="Số tiền" value={exp.amount.toString()} onChange={v => {
+                                    const newExp = [...expenditures];
+                                    newExp[idx].amount = parseInt(v) || 0;
+                                    setExpenditures(newExp);
+                                  }} placeholder="VNĐ" />
+                                </div>
+                                <button 
+                                  onClick={() => setExpenditures(expenditures.filter(e => e.id !== exp.id))}
+                                  className="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <InputGroup label="Số tiền" value={exp.amount.toString()} onChange={v => {
-                                const newExp = [...expenditures];
-                                newExp[idx].amount = parseInt(v) || 0;
-                                setExpenditures(newExp);
-                              }} placeholder="VNĐ" />
-                            </div>
-                            <button 
-                              onClick={() => setExpenditures(expenditures.filter(e => e.id !== exp.id))}
-                              className="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                            >
-                              <Trash2 size={18} />
-                            </button>
                           </div>
                         ))}
                       </div>
@@ -2674,7 +3529,7 @@ export default function App() {
                         </div>
                         <div>
                           <h4 className="font-bold text-slate-800">Phiếu thu tiền</h4>
-                          <p className="text-xs text-slate-500">Xuất phiếu thu cho {students.length} học sinh</p>
+                          <p className="text-xs text-slate-500">Xuất phiếu thu cho {activeStudentsCount} học sinh</p>
                         </div>
                         <button 
                           onClick={() => exportFinancialReports('receipts')}
@@ -2707,6 +3562,150 @@ export default function App() {
               )}
             </motion.div>
           )}
+
+          {activeTab === 'accounts' && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Quản lý tài khoản</h2>
+                  <p className="text-slate-700 font-medium">Cấu hình và đồng bộ tài khoản người dùng</p>
+                </div>
+              </div>
+
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                <div className="flex flex-col gap-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Danh sách tài khoản</h4>
+                      <p className="text-[10px] text-slate-400 italic">
+                        * Cấu hình các cột trong sheet "Accounts": Thứ tự, Tài khoản, Mật khẩu, Quyền, Thời hạn, Số máy
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={fetchKHDHData}
+                        disabled={isAnalyzing}
+                        className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 transition-all disabled:opacity-50"
+                      >
+                        {isAnalyzing ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                        Đồng bộ
+                      </button>
+                      <button 
+                        onClick={saveAccountsToGoogleSheets}
+                        disabled={isAnalyzing}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-lg shadow-indigo-100"
+                      >
+                        <Save size={16} />
+                        Lưu lên Sheet
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-wrap gap-4 items-end">
+                    <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
+                      <label className="text-[10px] font-black text-slate-700 uppercase">Tài khoản</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.username} 
+                        onChange={(e) => setNewAccount({...newAccount, username: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
+                      <label className="text-[10px] font-black text-slate-700 uppercase">Mật khẩu</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.password} 
+                        onChange={(e) => setNewAccount({...newAccount, password: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 w-32">
+                      <label className="text-[10px] font-black text-slate-700 uppercase">Quyền</label>
+                      <select 
+                        value={newAccount.role} 
+                        onChange={(e) => setNewAccount({...newAccount, role: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                      >
+                        <option value="Giáo viên">Giáo viên</option>
+                        <option value="Quản trị viên">Quản trị viên</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1 w-32">
+                      <label className="text-[10px] font-black text-slate-700 uppercase">Thời hạn</label>
+                      <input 
+                        type="date" 
+                        value={newAccount.expiry} 
+                        onChange={(e) => setNewAccount({...newAccount, expiry: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 w-20">
+                      <label className="text-[10px] font-black text-slate-700 uppercase">Số máy</label>
+                      <input 
+                        type="number" 
+                        value={newAccount.maxDevices} 
+                        onChange={(e) => setNewAccount({...newAccount, maxDevices: parseInt(e.target.value) || 1})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                      />
+                    </div>
+                    <button 
+                      onClick={addAccount}
+                      className="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">STT</th>
+                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Tài khoản</th>
+                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Mật khẩu</th>
+                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Quyền</th>
+                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Thời hạn</th>
+                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Số máy</th>
+                          <th className="text-right p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userAccounts.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-slate-400 italic">Chưa có tài khoản nào được đồng bộ</td>
+                          </tr>
+                        ) : (
+                          userAccounts.map((acc) => (
+                            <tr key={acc.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-all">
+                              <td className="p-4 text-sm text-slate-500">{acc.index}</td>
+                              <td className="p-4 text-sm font-bold text-slate-700">{acc.username}</td>
+                              <td className="p-4 text-sm text-slate-500">{acc.password}</td>
+                              <td className="p-4">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${acc.role === 'Quản trị viên' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                                  {acc.role}
+                                </span>
+                              </td>
+                              <td className="p-4 text-sm text-slate-500">{acc.expiry || 'Vĩnh viễn'}</td>
+                              <td className="p-4 text-sm text-slate-500">{acc.maxDevices}</td>
+                              <td className="p-4 text-right">
+                                <button 
+                                  onClick={() => deleteAccount(acc.id)}
+                                  className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
     </div>
@@ -2719,9 +3718,9 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${active ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${active ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'}`}
     >
-      <span className={`${active ? 'text-indigo-600' : 'text-slate-400'}`}>{icon}</span>
+      <span className={`${active ? 'text-indigo-600' : 'text-slate-600'}`}>{icon}</span>
       <span className="font-bold text-sm">{label}</span>
     </button>
   );
@@ -2730,8 +3729,8 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
 function SectionHeader({ title, subtitle }: { title: string, subtitle: string }) {
   return (
     <div className="mb-8">
-      <h2 className="text-3xl font-black text-slate-800 tracking-tight">{title}</h2>
-      <p className="text-slate-500 font-medium">{subtitle}</p>
+      <h2 className="text-3xl font-black text-slate-900 tracking-tight">{title}</h2>
+      <p className="text-slate-600 font-bold">{subtitle}</p>
     </div>
   );
 }
@@ -2739,13 +3738,13 @@ function SectionHeader({ title, subtitle }: { title: string, subtitle: string })
 function InputGroup({ label, value, onChange, placeholder, type = "text" }: { label: string, value: string, onChange: (v: string) => void, placeholder: string, type?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
+      <label className="text-xs font-black text-slate-700 uppercase tracking-wider">{label}</label>
       <input 
         type={type} 
         value={value} 
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+        className="p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900 font-medium"
       />
     </div>
   );
