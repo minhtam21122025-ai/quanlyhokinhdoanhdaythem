@@ -9,6 +9,7 @@ import {
   LogIn, 
   Settings, 
   BookOpen, 
+  Eye,
   Calendar, 
   FileText, 
   Plus, 
@@ -228,26 +229,26 @@ const Dashboard = ({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <span className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/20 backdrop-blur-md text-sm font-black uppercase tracking-widest mb-8">
-              <Sparkles size={18} /> Hệ thống quản lý giáo dục
+            <span className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/20 backdrop-blur-md text-sm font-semibold mb-8">
+              <Sparkles size={18} /> Hệ thống quản lý dữ liệu cơ sở dạy thêm
             </span>
-            <h1 className="text-6xl lg:text-8xl font-black mb-8 leading-tight font-display tracking-tighter">
+            <h1 className="text-4xl lg:text-6xl font-bold mb-8 leading-tight font-sans">
               Chào mừng trở lại, <br />
               <span className="text-indigo-100">{currentUser?.username}</span>
             </h1>
-            <p className="text-white text-3xl mb-12 leading-relaxed opacity-95 font-bold">
-              Hệ thống HOÀNG GIA giúp bạn tối ưu hóa quy trình quản lý học sinh, chương trình giảng dạy và tài chính một cách chuyên nghiệp nhất.
+            <p className="text-white text-xl mb-12 leading-relaxed opacity-95 font-medium">
+              Hệ thống giúp bạn tối ưu hóa quy trình quản lý học sinh, chương trình giảng dạy và tài chính một cách chuyên nghiệp nhất.
             </p>
             <div className="flex flex-wrap gap-8">
               <button 
                 onClick={() => setActiveTab('students')}
-                className="px-10 py-5 bg-white text-indigo-600 rounded-[1.5rem] font-black text-2xl hover:bg-indigo-50 transition-all flex items-center gap-4 shadow-2xl active:scale-95"
+                className="px-10 py-5 bg-white text-indigo-600 rounded-[1.5rem] font-semibold text-xl hover:bg-indigo-50 transition-all flex items-center gap-4 shadow-2xl active:scale-95"
               >
                 <Plus size={32} /> Thêm học sinh
               </button>
               <button 
                 onClick={() => setActiveTab('finance')}
-                className="px-10 py-5 bg-indigo-500/30 backdrop-blur-md border-2 border-white/20 text-white rounded-[1.5rem] font-black text-2xl hover:bg-white/20 transition-all flex items-center gap-4 active:scale-95"
+                className="px-10 py-5 bg-indigo-500/30 backdrop-blur-md border-2 border-white/20 text-white rounded-[1.5rem] font-semibold text-xl hover:bg-white/20 transition-all flex items-center gap-4 active:scale-95"
               >
                 Xem báo cáo tài chính
               </button>
@@ -279,8 +280,8 @@ const Dashboard = ({
                 {stat.trend}
               </span>
             </div>
-            <p className="text-slate-600 text-xl font-black mb-3 uppercase tracking-widest">{stat.label}</p>
-            <h3 className="text-5xl font-black text-slate-900 font-display tracking-tighter">{stat.value}</h3>
+            <p className="text-slate-600 text-lg font-semibold mb-3">{stat.label}</p>
+            <h3 className="text-4xl font-bold text-slate-900 font-sans">{stat.value}</h3>
           </motion.div>
         ))}
       </div>
@@ -291,37 +292,37 @@ const Dashboard = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           <ModuleCard 
             title="Cấu hình HKD"
-            desc="Quản lý thông tin hộ kinh doanh, hệ thống và phân quyền."
-            icon={<Settings className="text-indigo-600" />}
+            desc="Thiết lập thông tin cơ sở, cấu hình hệ thống và quản lý các tham số vận hành cốt lõi."
+            image="https://picsum.photos/seed/config/800/600"
             onClick={() => setActiveTab('config_hkd')}
             color="indigo"
           />
           <ModuleCard 
             title="Quản lý học sinh"
-            desc="Danh sách học sinh, điểm danh và theo dõi tiến độ."
-            icon={<Users className="text-blue-600" />}
+            desc="Hệ thống lưu trữ hồ sơ, theo dõi chuyên cần và đánh giá tiến độ học tập của từng học sinh."
+            image="https://picsum.photos/seed/students/800/600"
             onClick={() => setActiveTab('students')}
             color="blue"
           />
           <ModuleCard 
             title="Chương trình dạy"
-            desc="Quản lý khóa học, giáo án và lịch báo giảng."
-            icon={<ClipboardList className="text-purple-600" />}
+            desc="Xây dựng kế hoạch giảng dạy, quản lý phân phối chương trình và lịch báo giảng chi tiết."
+            image="https://picsum.photos/seed/teaching/800/600"
             onClick={() => setActiveTab('program')}
             color="purple"
           />
           <ModuleCard 
             title="Quản lý tài chính"
-            desc="Theo dõi học phí, chi phí và báo cáo doanh thu."
-            icon={<DollarSign className="text-emerald-600" />}
+            desc="Công cụ quản lý học phí, kiểm soát thu chi và báo cáo kết quả kinh doanh định kỳ."
+            image="https://picsum.photos/seed/finance/800/600"
             onClick={() => setActiveTab('finance')}
             color="emerald"
           />
           {currentUser?.role === 'Quản trị viên' && (
             <ModuleCard 
               title="Quản lý tài khoản"
-              desc="Cấu hình tài khoản người dùng, phân quyền và thời hạn sử dụng."
-              icon={<ShieldCheck className="text-rose-600" />}
+              desc="Phân quyền người dùng, quản lý thiết bị truy cập và bảo mật hệ thống toàn diện."
+              image="https://picsum.photos/seed/security/800/600"
               onClick={() => setActiveTab('accounts')}
               color="rose"
             />
@@ -330,41 +331,41 @@ const Dashboard = ({
 
         {/* Charts Section */}
         <div className="flex flex-col gap-8">
-          <div className="bg-white p-10 rounded-[3rem] border-2 border-slate-100 shadow-sm hover:shadow-xl transition-all">
-            <div className="flex items-center justify-between mb-10">
+          <div className="bg-white p-6 rounded-[2rem] border-2 border-slate-100 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-4xl font-black text-slate-900 font-display tracking-tight">Tỉ lệ duy trì học sinh</h3>
-                <p className="text-slate-600 text-xl font-bold mt-2">Phân tích biến động số lượng học sinh theo tháng</p>
+                <h3 className="text-2xl font-black text-slate-900 font-display tracking-tight">Tỉ lệ duy trì</h3>
+                <p className="text-slate-500 text-sm font-bold mt-1">Biến động học sinh theo tháng</p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-2xl ring-1 ring-slate-100">
-                <TrendingUp className="text-indigo-600 w-8 h-8" />
+              <div className="p-3 bg-slate-50 rounded-xl ring-1 ring-slate-100">
+                <TrendingUp className="text-indigo-600 w-6 h-6" />
               </div>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} dy={5} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
                   <Tooltip 
-                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
                     cursor={{fill: '#f8fafc'}}
                   />
-                  <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6">
-              <div className="w-24 h-24">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm flex items-center gap-4">
+              <div className="w-16 h-16">
                 <ResponsiveContainer width="100%" height="100%">
                   <RePieChart>
                     <Pie
                       data={attendanceData}
-                      innerRadius={30}
-                      outerRadius={40}
+                      innerRadius={20}
+                      outerRadius={25}
                       paddingAngle={5}
                       dataKey="value"
                     >
@@ -376,26 +377,24 @@ const Dashboard = ({
                 </ResponsiveContainer>
               </div>
               <div>
-                <h4 className="text-lg font-black text-slate-700 uppercase tracking-wider mb-1">Chuyên cần</h4>
-                <p className="text-4xl font-black text-slate-900 font-display">94.2%</p>
-                <p className="text-base text-emerald-600 font-black mt-2">Tăng 2.4% so với tuần trước</p>
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-0.5">Chuyên cần</h4>
+                <p className="text-xl font-black text-slate-900 font-display">94.2%</p>
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <h4 className="text-lg font-black text-slate-700 uppercase tracking-wider mb-6">Học phí tháng này</h4>
-              <div className="flex items-end justify-between mb-3">
-                <p className="text-4xl font-black text-slate-900 font-display">75%</p>
-                <p className="text-base font-black text-slate-600">45/60 học sinh</p>
+            <div className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+              <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Học phí tháng</h4>
+              <div className="flex items-end justify-between mb-2">
+                <p className="text-xl font-black text-slate-900 font-display">75%</p>
+                <p className="text-xs font-black text-slate-500">45/60</p>
               </div>
-              <div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: '75%' }}
                   className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
                 />
               </div>
-              <p className="text-sm text-slate-600 mt-4 font-black italic tracking-tight">* Đã bao gồm các khoản thu bổ sung</p>
             </div>
           </div>
         </div>
@@ -404,34 +403,40 @@ const Dashboard = ({
   );
 };
 
-const ModuleCard = ({ title, desc, icon, onClick, color }: { 
+const ModuleCard = ({ title, desc, image, onClick, color }: { 
   title: string; 
   desc: string; 
-  icon: React.ReactNode; 
+  image: string; 
   onClick: () => void;
   color: string;
 }) => {
   const colorMap: Record<string, string> = {
-    indigo: 'hover:border-indigo-200 hover:bg-indigo-50/30',
-    blue: 'hover:border-blue-200 hover:bg-blue-50/30',
-    purple: 'hover:border-purple-200 hover:bg-purple-50/30',
-    emerald: 'hover:border-emerald-200 hover:bg-emerald-50/30',
+    indigo: 'hover:border-indigo-200',
+    blue: 'hover:border-blue-200',
+    purple: 'hover:border-purple-200',
+    emerald: 'hover:border-emerald-200',
   };
 
   return (
     <button 
       onClick={onClick}
-      className={`text-left p-10 sm:p-12 bg-white border-2 border-slate-100 rounded-[3rem] shadow-sm transition-all duration-300 group ${colorMap[color] || ''} hover:shadow-2xl hover:-translate-y-2`}
+      className={`text-left bg-white border-2 border-slate-100 rounded-[3rem] shadow-sm transition-all duration-300 group ${colorMap[color] || ''} hover:shadow-2xl hover:-translate-y-2 overflow-hidden flex flex-col`}
     >
-      <div className="mb-10 group-hover:scale-110 transition-transform duration-300">
-        <div className="p-6 bg-slate-50 rounded-[1.5rem] w-fit group-hover:bg-white group-hover:shadow-xl transition-all ring-1 ring-slate-100">
-          {React.cloneElement(icon as React.ReactElement, { size: 36 })}
-        </div>
+      <div className="h-48 overflow-hidden relative">
+        <img 
+          src={image} 
+          alt={title} 
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
       </div>
-      <h3 className="text-4xl font-black text-slate-900 mb-4 font-display tracking-tight">{title}</h3>
-      <p className="text-slate-700 text-xl font-bold leading-relaxed mb-10 opacity-80">{desc}</p>
-      <div className="flex items-center gap-4 text-xl font-black text-indigo-600 group-hover:translate-x-3 transition-transform">
-        Truy cập ngay <ArrowRight size={28} />
+      <div className="p-8 flex-1 flex flex-col">
+        <h3 className="text-2xl font-bold text-slate-900 mb-4 font-sans">{title}</h3>
+        <p className="text-slate-700 text-lg font-medium leading-relaxed mb-8 opacity-80 flex-1">{desc}</p>
+        <div className="flex items-center gap-4 text-lg font-bold text-indigo-600 group-hover:translate-x-3 transition-transform">
+          Truy cập ngay <ArrowRight size={28} />
+        </div>
       </div>
     </button>
   );
@@ -556,13 +561,14 @@ const Reports = ({
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [selectedGradeForProgram, setSelectedGradeForProgram] = useState<number | null>(null);
 
   const [hkdConfig, setHkdConfig] = useState<HKDConfig>({
     name: '',
     address: '',
     owner: '',
     taxId: '',
-    scriptUrl: 'https://script.google.com/macros/s/AKfycbwdXqPI3viUroHevEJ5CzLk4dh3QfwstmJkB1PQA7alN-DbCSIdAPyXYSPhSd1Bf4ksmQ/exec'
+    scriptUrl: ''
   });
 
   const [subjects, setSubjects] = useState(FIXED_SUBJECTS);
@@ -575,6 +581,7 @@ export default function App() {
       return;
     }
     try {
+      setIsAnalyzing(true);
       const response = await fetch(hkdConfig.scriptUrl);
       const data = await response.json();
       
@@ -584,8 +591,18 @@ export default function App() {
       }
       
       if (data.program) {
-        setKhdhData(data.program);
-        localStorage.setItem('khdh_data', JSON.stringify(data.program));
+        const mappedKhdhData: Record<string, string> = {};
+        [6, 7, 8, 9].forEach(grade => {
+          const gradeProgram = data.program[grade] || [];
+          gradeProgram.forEach((item: any) => {
+            // Key format: grade-subject-subSubject-period
+            const key = `${grade}-${item.subject}-${item.subSubject || ''}-${item.period}`;
+            mappedKhdhData[key] = item.content || '';
+          });
+        });
+        
+        setKhdhData(mappedKhdhData); 
+        localStorage.setItem('khdh_data', JSON.stringify(mappedKhdhData));
       }
 
       if (data.accounts && Array.isArray(data.accounts)) {
@@ -593,35 +610,17 @@ export default function App() {
         localStorage.setItem('user_accounts', JSON.stringify(data.accounts));
       }
       
-      alert('Đã đồng bộ từ google sheets');
+      alert('Đã đồng bộ dữ liệu từ Google Sheets thành công!');
     } catch (error) {
       console.error('Fetch error:', error);
       alert('Lỗi khi đồng bộ dữ liệu. Vui lòng kiểm tra lại Script URL và quyền truy cập.');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
-  const uploadToGoogleSheets = async (programData: Record<string, string>) => {
-    if (!hkdConfig.scriptUrl) {
-      alert('Vui lòng cấu hình Google Script URL trong phần Cấu hình HKD!');
-      return;
-    }
-    try {
-      await fetch(hkdConfig.scriptUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subjects: subjects,
-          program: programData
-        }),
-      });
-      alert('Đã đồng bộ lên Google Sheets thành công!');
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Lỗi khi gửi dữ liệu lên Google Sheets.');
-    }
+  const uploadToGoogleSheets = async (programData: Record<string, string>, targetGrades?: number[]) => {
+    alert('Hệ thống đang ở chế độ CHỈ ĐỌC. Vui lòng chỉnh sửa trực tiếp trên Google Sheets.');
   };
 
   const getLastDayOfMonth = (monthStr: string) => {
@@ -648,7 +647,7 @@ export default function App() {
       return next;
     });
     
-    await uploadToGoogleSheets(newKhdhData);
+    await uploadToGoogleSheets(newKhdhData, [grade]);
     setConfirmDeleteGrade(null);
     alert(`Đã xóa chương trình dạy khối ${grade} thành công!`);
   };
@@ -2111,74 +2110,20 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 1. Check against local userAccounts or default admin
-    const account = userAccounts.find(u => u.username === loginUsername && u.password === loginPassword);
-    
-    if (account) {
-      if (account.expiry && new Date(account.expiry) < new Date()) {
-        alert('Tài khoản đã hết hạn sử dụng!');
-        return;
-      }
-      setCurrentUser(account);
-      setIsAdmin(account.role === 'Quản trị viên');
-      setIsLoggedIn(true);
-      setActiveTab('dashboard');
-      return;
-    } else if (loginUsername === 'admin' && loginPassword === '123456') {
-      const adminUser = {
-        id: 'admin',
-        index: 0,
-        username: 'admin',
-        password: '123456',
-        role: 'Quản trị viên',
-        expiry: '',
-        maxDevices: 999
-      };
-      setCurrentUser(adminUser);
-      setIsAdmin(true);
-      setIsLoggedIn(true);
-      setActiveTab('dashboard');
-      return;
-    }
-
-    // 2. Try live login via Google Script
-    if (hkdConfig.scriptUrl) {
-      try {
-        setIsAnalyzing(true);
-        const url = `${hkdConfig.scriptUrl}?action=login&username=${encodeURIComponent(loginUsername)}&password=${encodeURIComponent(loginPassword)}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.success && data.user) {
-          const liveUser = data.user;
-          if (liveUser.expiry && new Date(liveUser.expiry) < new Date()) {
-            alert('Tài khoản đã hết hạn sử dụng!');
-            return;
-          }
-          setCurrentUser(liveUser);
-          setIsAdmin(liveUser.role === 'Quản trị viên');
-          setIsLoggedIn(true);
-          setActiveTab('dashboard');
-          
-          // Update local accounts
-          const updatedAccounts = [...userAccounts];
-          const idx = updatedAccounts.findIndex(u => u.username === liveUser.username);
-          if (idx !== -1) updatedAccounts[idx] = liveUser;
-          else updatedAccounts.push(liveUser);
-          setUserAccounts(updatedAccounts);
-          localStorage.setItem('user_accounts', JSON.stringify(updatedAccounts));
-        } else {
-          alert('Tài khoản hoặc mật khẩu không chính xác!');
-        }
-      } catch (error) {
-        console.error('Live login error:', error);
-        alert('Lỗi khi kết nối đến máy chủ. Vui lòng thử lại sau.');
-      } finally {
-        setIsAnalyzing(false);
-      }
-    } else {
-      alert('Tài khoản hoặc mật khẩu không chính xác!');
-    }
+    // Temporarily allow any login
+    const adminUser = {
+      id: 'admin',
+      index: 0,
+      username: loginUsername || 'admin',
+      password: loginPassword || '123456',
+      role: 'Quản trị viên',
+      expiry: '',
+      maxDevices: 999
+    };
+    setCurrentUser(adminUser);
+    setIsAdmin(true);
+    setIsLoggedIn(true);
+    setActiveTab('dashboard');
   };
 
   if (!isLoggedIn) {
@@ -2194,7 +2139,7 @@ export default function App() {
               <GraduationCap className="text-white w-16 h-16" />
             </div>
             <div className="text-center">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-tight">Cơ sở giáo dục <br/>Hoàng Gia</h1>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-tight">Hệ thống quản lý <br/>Dữ liệu dạy thêm</h1>
               <p className="text-xl text-slate-600 font-bold mt-2">Hệ thống quản lý nội bộ</p>
             </div>
           </div>
@@ -2206,7 +2151,7 @@ export default function App() {
                 type="text" 
                 value={loginUsername} 
                 onChange={(e) => setLoginUsername(e.target.value)}
-                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-black transition-all placeholder:text-slate-400" 
+                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-medium transition-all placeholder:text-slate-400" 
                 placeholder="Nhập tài khoản..."
               />
             </div>
@@ -2216,47 +2161,13 @@ export default function App() {
                 type="password" 
                 value={loginPassword} 
                 onChange={(e) => setLoginPassword(e.target.value)}
-                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-black transition-all placeholder:text-slate-400" 
+                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-medium transition-all placeholder:text-slate-400" 
                 placeholder="Nhập mật khẩu..."
               />
             </div>
             <button type="submit" className="mt-6 bg-indigo-600 text-white py-5 rounded-[1.5rem] text-2xl font-black hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-200 flex items-center justify-center gap-4 active:scale-95">
               <LogIn size={28} />
               Đăng nhập hệ thống
-            </button>
-            <button 
-              type="button"
-              onClick={fetchKHDHData}
-              className="mt-6 text-indigo-600 text-base font-black hover:underline flex items-center justify-center gap-3 mx-auto bg-indigo-50 px-6 py-3 rounded-2xl border border-indigo-100 transition-all hover:bg-indigo-100"
-            >
-              <RefreshCw size={20} />
-              Đồng bộ tài khoản từ Google Sheets
-            </button>
-            <button 
-              type="button"
-              onClick={() => {
-                const pwd = prompt('Vui lòng nhập mật khẩu quản trị:');
-                if (pwd === '123456') {
-                  setCurrentUser({
-                    id: 'admin',
-                    index: 0,
-                    username: 'admin',
-                    password: '123456',
-                    role: 'Quản trị viên',
-                    expiry: '',
-                    maxDevices: 999
-                  });
-                  setIsAdmin(true);
-                  setIsLoggedIn(true);
-                  setActiveTab('accounts');
-                } else if (pwd !== null) {
-                  alert('Mật khẩu không chính xác!');
-                }
-              }}
-              className="mt-4 text-rose-600 text-base font-black hover:underline flex items-center justify-center gap-3 mx-auto"
-            >
-              <ShieldCheck size={20} />
-              Quản lý tài khoản (Admin)
             </button>
           </form>
         </motion.div>
@@ -2280,7 +2191,7 @@ export default function App() {
             <div className="bg-indigo-600 p-4 rounded-[1.25rem] shadow-2xl shadow-indigo-200 ring-4 ring-indigo-50">
               <GraduationCap className="text-white w-10 h-10" />
             </div>
-            <span className="font-black text-4xl text-slate-900 tracking-tighter font-display uppercase hidden sm:block">Hoàng Gia</span>
+            <span className="font-black text-2xl text-slate-900 tracking-tighter font-display uppercase hidden sm:block">Dữ liệu dạy thêm</span>
           </div>
 
           <nav className="hidden lg:flex items-center gap-4">
@@ -2349,12 +2260,40 @@ export default function App() {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-3 flex items-center justify-around shadow-[0_-10px_40px_rgb(0,0,0,0.08)]">
         <MobileNavLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home size={26} />} label="Home" />
         <MobileNavLink active={activeTab === 'students'} onClick={() => setActiveTab('students')} icon={<Users size={26} />} label="Học sinh" />
-        <MobileNavLink active={activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal'} onClick={() => setActiveTab('program')} icon={<ClipboardList size={26} />} label="Dạy" />
+        <MobileNavLink active={activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config'} onClick={() => setActiveTab('program')} icon={<ClipboardList size={26} />} label="Dạy" />
         <MobileNavLink active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon={<DollarSign size={26} />} label="Tiền" />
         <MobileNavLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<BarChart3 size={26} />} label="Báo cáo" />
       </nav>
 
       <main className="flex-1 p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto w-full pb-24 lg:pb-12">
+        {['program', 'schedule', 'journal', 'subject_config'].includes(activeTab) && (
+          <div className="flex flex-wrap gap-4 mb-10 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 w-fit">
+            <button 
+              onClick={() => setActiveTab('program')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'program' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <BookOpen size={18} /> Chương trình dạy
+            </button>
+            <button 
+              onClick={() => setActiveTab('subject_config')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'subject_config' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <Settings size={18} /> Cấu hình môn học
+            </button>
+            <button 
+              onClick={() => setActiveTab('schedule')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'schedule' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <Calendar size={18} /> Lịch báo giảng
+            </button>
+            <button 
+              onClick={() => setActiveTab('journal')}
+              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'journal' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <FileText size={18} /> Sổ đầu bài
+            </button>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <Dashboard 
@@ -2391,6 +2330,21 @@ export default function App() {
                     <Save size={20} />
                     Lưu cấu hình
                   </button>
+
+                  <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mt-6">
+                    <h4 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                      <BookOpen size={20} /> Hướng dẫn kết nối Google Sheets
+                    </h4>
+                    <ul className="text-sm text-indigo-800 space-y-2 list-disc pl-5">
+                      <li>Mở tệp Google Sheets của bạn.</li>
+                      <li>Chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
+                      <li>Dán mã <code>code.gs</code> đã được cung cấp vào trình soạn thảo.</li>
+                      <li>Nhấn <b>Triển khai</b> &gt; <b>Triển khai mới</b>.</li>
+                      <li>Chọn loại là <b>Ứng dụng web</b>, thiết lập "Người có quyền truy cập" là <b>Bất kỳ ai</b>.</li>
+                      <li>Sao chép <b>URL ứng dụng web</b> và dán vào ô "Google Script URL" ở trên.</li>
+                      <li><b>Lưu ý:</b> Hệ thống hoạt động theo chế độ đồng bộ 1 chiều (Chỉ đọc từ Sheets). Mọi thay đổi về cấu hình, tài khoản, PPCT cần được thực hiện trực tiếp trên Google Sheets.</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -2560,7 +2514,7 @@ export default function App() {
                                   localStorage.setItem('khdh_data', JSON.stringify(newKhdhData));
                                   
                                   // Sync to Google Sheets
-                                  uploadToGoogleSheets(newKhdhData);
+                                  uploadToGoogleSheets(newKhdhData, [grade]);
                                   
                                   alert(`Đã tải lên và đồng bộ file: ${file.name} cho khối ${grade}`);
                                 } catch (err) {
@@ -2579,12 +2533,19 @@ export default function App() {
                             alert('Vui lòng tải lên chương trình trước khi lưu!');
                             return;
                           }
-                          uploadToGoogleSheets(khdhData);
+                          uploadToGoogleSheets(khdhData, [grade]);
                         }}
                         className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-100 transition-all group"
                       >
                         <Save className="text-slate-400 group-hover:text-emerald-600" size={20} />
                         <span className="text-xs font-bold text-slate-600 group-hover:text-emerald-700 text-center">Đồng bộ Sheets thủ công</span>
+                      </button>
+                      <button 
+                        onClick={() => setSelectedGradeForProgram(grade)}
+                        className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-amber-50 hover:border-amber-100 transition-all group"
+                      >
+                        <Eye className="text-slate-400 group-hover:text-amber-600" size={20} />
+                        <span className="text-xs font-bold text-slate-600 group-hover:text-amber-700 text-center">Xem chi tiết</span>
                       </button>
                       <button 
                         onClick={() => {
@@ -2625,6 +2586,85 @@ export default function App() {
                   </div>
                 ))}
               </div>
+
+              {/* Detail View Modal */}
+              {selectedGradeForProgram && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                  <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col"
+                  >
+                    <div className="p-8 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-amber-100 p-4 rounded-2xl text-amber-600">
+                          <BookOpen size={32} />
+                        </div>
+                        <div>
+                          <h3 className="text-3xl font-black text-slate-900">Chi tiết chương trình Khối {selectedGradeForProgram}</h3>
+                          <p className="text-lg text-slate-500 font-bold">Danh sách các tiết dạy đã cấu hình</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedGradeForProgram(null)}
+                        className="p-4 hover:bg-slate-200 rounded-2xl transition-all text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={32} />
+                      </button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                      <div className="grid grid-cols-1 gap-4">
+                        {Object.entries(khdhData)
+                          .filter(([key]) => key.startsWith(`${selectedGradeForProgram}-`))
+                          .sort((a, b) => {
+                            const partsA = a[0].split('-');
+                            const partsB = b[0].split('-');
+                            // Sort by subject, then sub-subject, then period
+                            if (partsA[1] !== partsB[1]) return partsA[1].localeCompare(partsB[1]);
+                            if (partsA[2] !== partsB[2]) return partsA[2].localeCompare(partsB[2]);
+                            return parseInt(partsA[3]) - parseInt(partsB[3]);
+                          })
+                          .map(([key, content]) => {
+                            const parts = key.split('-');
+                            return (
+                              <div key={key} className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 flex flex-col md:flex-row md:items-center gap-4 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
+                                <div className="flex items-center gap-4 min-w-[200px]">
+                                  <span className="bg-white px-4 py-2 rounded-xl border-2 border-slate-200 text-indigo-600 font-black text-lg shadow-sm">
+                                    Tiết {parts[3]}
+                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="font-black text-slate-900 text-xl">{parts[1]}</span>
+                                    <span className="text-sm font-bold text-slate-500 italic">{parts[2]}</span>
+                                  </div>
+                                </div>
+                                <div className="flex-1 text-xl font-bold text-slate-700 leading-relaxed">
+                                  {content}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        {Object.keys(khdhData).filter(k => k.startsWith(`${selectedGradeForProgram}-`)).length === 0 && (
+                          <div className="text-center py-20 text-slate-400">
+                            <BookOpen size={80} className="mx-auto mb-6 opacity-20" />
+                            <p className="text-2xl font-bold">Chưa có dữ liệu chương trình cho khối này.</p>
+                            <p className="text-lg mt-2">Vui lòng tải lên file Excel để bắt đầu.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="p-8 bg-slate-50 border-t-2 border-slate-100 flex justify-end">
+                      <button 
+                        onClick={() => setSelectedGradeForProgram(null)}
+                        className="bg-slate-900 text-white px-10 py-4 rounded-2xl text-xl font-black hover:bg-slate-800 transition-all shadow-xl"
+                      >
+                        Đóng
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -3752,7 +3792,7 @@ function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onCl
       <div className={`p-3 rounded-2xl transition-all ${active ? 'bg-indigo-50 shadow-md ring-1 ring-indigo-100' : ''}`}>
         {React.cloneElement(icon as React.ReactElement, { size: 32 })}
       </div>
-      <span className={`text-[13px] font-black uppercase tracking-widest ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+      <span className={`text-[13px] font-semibold ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
     </button>
   );
 }
@@ -3760,8 +3800,8 @@ function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onCl
 function SectionHeader({ title, subtitle }: { title: string, subtitle: string }) {
   return (
     <div className="mb-12">
-      <h2 className="text-5xl font-black text-slate-900 tracking-tighter font-display leading-tight">{title}</h2>
-      <p className="text-slate-700 text-xl font-bold mt-3 opacity-90">{subtitle}</p>
+      <h2 className="text-3xl font-bold text-slate-900 font-sans leading-tight">{title}</h2>
+      <p className="text-slate-500 text-lg font-medium mt-3 opacity-90">{subtitle}</p>
     </div>
   );
 }

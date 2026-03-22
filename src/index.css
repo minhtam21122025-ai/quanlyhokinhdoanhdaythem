@@ -9,7 +9,7 @@
 
 @layer base {
   html {
-    font-size: 18px; /* Further increased base font size */
+    font-size: 16px; /* Standard base font size */
   }
   
   body {
@@ -19,7 +19,7 @@
 
 @layer components {
   .nav-link {
-    @apply flex items-center gap-2 px-4 py-3 rounded-xl text-lg font-bold transition-all duration-200;
+    @apply flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200;
   }
   
   .nav-link-active {
