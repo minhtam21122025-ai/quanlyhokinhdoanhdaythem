@@ -98,6 +98,7 @@ interface UserAccount {
   role: string;
   expiry: string;
   maxDevices: number;
+  registeredDevices?: string[];
 }
 
 interface TableRow {
@@ -184,13 +185,15 @@ const Dashboard = ({
   activeStudentsCount, 
   revenue, 
   setActiveTab, 
-  currentUser 
+  currentUser,
+  isAdmin
 }: { 
   studentsCount: number; 
   activeStudentsCount: number; 
   revenue: number; 
   setActiveTab: (tab: Tab) => void; 
   currentUser: UserAccount | null;
+  isAdmin: boolean;
 }) => {
   const stats = [
     { label: 'Tổng học sinh', value: studentsCount, icon: <Users className="text-blue-600" />, trend: '+12%', color: 'bg-blue-50' },
@@ -318,6 +321,15 @@ const Dashboard = ({
             onClick={() => setActiveTab('finance')}
             color="emerald"
           />
+          {isAdmin && (
+            <ModuleCard 
+              title="Quản lý tài khoản"
+              desc="Cấu hình tài khoản người dùng, phân quyền, thời hạn sử dụng và giới hạn số máy truy cập."
+              image="https://picsum.photos/seed/accounts/800/600"
+              onClick={() => setActiveTab('accounts')}
+              color="rose"
+            />
+          )}
         </div>
 
         {/* Charts Section */}
@@ -597,8 +609,17 @@ export default function App() {
       }
 
       if (data.accounts && Array.isArray(data.accounts)) {
-        setUserAccounts(data.accounts);
-        localStorage.setItem('user_accounts', JSON.stringify(data.accounts));
+        const syncedAccounts = data.accounts.map((acc: any, idx: number) => {
+          // Find existing account to preserve registeredDevices
+          const existing = userAccounts.find(u => u.username === acc.username);
+          return {
+            ...acc,
+            id: acc.id || existing?.id || `acc_${idx}_${Date.now()}`,
+            registeredDevices: acc.registeredDevices || existing?.registeredDevices || []
+          };
+        });
+        setUserAccounts(syncedAccounts);
+        localStorage.setItem('user_accounts', JSON.stringify(syncedAccounts));
       }
       
       alert('Đã đồng bộ dữ liệu từ Google Sheets thành công!');
@@ -1553,6 +1574,16 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
+  const [deviceId, setDeviceId] = useState<string>('');
+
+  useEffect(() => {
+    let id = localStorage.getItem('device_id');
+    if (!id) {
+      id = 'dev_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('device_id', id);
+    }
+    setDeviceId(id);
+  }, []);
   const [loginUsername, setLoginUsername] = useState('admin');
   const [loginPassword, setLoginPassword] = useState('123456');
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
@@ -2101,18 +2132,75 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Temporarily allow any login
-    const adminUser = {
-      id: 'admin',
-      index: 0,
-      username: loginUsername || 'admin',
-      password: loginPassword || '123456',
-      role: 'Quản trị viên',
-      expiry: '',
-      maxDevices: 999
-    };
-    setCurrentUser(adminUser);
-    setIsAdmin(true);
+    const username = loginUsername.trim();
+    const password = loginPassword.trim();
+
+    if (!username || !password) {
+      alert('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
+      return;
+    }
+
+    // 1. Master Admin Check (Always works)
+    if (username === 'admin' && password === '123456') {
+      const adminUser: UserAccount = {
+        id: 'master-admin',
+        index: 0,
+        username: 'admin',
+        password: '123456',
+        role: 'Quản trị viên',
+        expiry: '',
+        maxDevices: 999
+      };
+      setCurrentUser(adminUser);
+      setIsAdmin(true);
+      setIsLoggedIn(true);
+      setActiveTab('dashboard');
+      return;
+    }
+
+    // 2. Check synced accounts
+    const user = userAccounts.find(u => 
+      u.username.trim() === username && 
+      (u.password || '').toString().trim() === password
+    );
+
+    if (!user) {
+      alert('Tài khoản hoặc mật khẩu không chính xác!');
+      return;
+    }
+
+    // 3. Check expiry
+    if (user.expiry) {
+      const expiryDate = new Date(user.expiry);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (today > expiryDate) {
+        alert('Tài khoản của bạn đã hết hạn sử dụng. Vui lòng liên hệ quản trị viên!');
+        return;
+      }
+    }
+
+    // 4. Check device limit
+    const registeredDevices = user.registeredDevices || [];
+    if (!registeredDevices.includes(deviceId) && registeredDevices.length >= user.maxDevices) {
+      alert(`Tài khoản đã đạt giới hạn số máy truy cập (${user.maxDevices}). Vui lòng liên hệ quản trị viên!`);
+      return;
+    }
+
+    // Register device if not already registered
+    if (!registeredDevices.includes(deviceId)) {
+      const updatedAccounts = userAccounts.map(u => {
+        if (u.id === user.id) {
+          return { ...u, registeredDevices: [...registeredDevices, deviceId] };
+        }
+        return u;
+      });
+      setUserAccounts(updatedAccounts);
+      localStorage.setItem('user_accounts', JSON.stringify(updatedAccounts));
+    }
+
+    setCurrentUser(user);
+    setIsAdmin(user.role === 'Quản trị viên');
     setIsLoggedIn(true);
     setActiveTab('dashboard');
   };
@@ -2289,6 +2377,7 @@ export default function App() {
               revenue={revenue}
               setActiveTab={setActiveTab}
               currentUser={currentUser}
+              isAdmin={isAdmin}
             />
           )}
           {activeTab === 'reports' && (
@@ -2304,6 +2393,17 @@ export default function App() {
               <div>
                 <SectionHeader title="Cấu hình Hộ Kinh Doanh" subtitle="Thông tin pháp lý và địa chỉ cơ sở" />
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                  {isAdmin && (
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={() => setActiveTab('accounts')}
+                        className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-rose-100 transition-all border border-rose-100"
+                      >
+                        <ShieldCheck size={20} />
+                        Quản lý tài khoản người dùng
+                      </button>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." />
                     <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." />
@@ -3730,8 +3830,16 @@ export default function App() {
                                   {acc.role}
                                 </span>
                               </td>
-                              <td className="p-4 text-sm text-slate-500">{acc.expiry || 'Vĩnh viễn'}</td>
-                              <td className="p-4 text-sm text-slate-500">{acc.maxDevices}</td>
+                              <td className="p-4 text-sm text-slate-500">
+                                {acc.expiry ? (
+                                  <span className={new Date(acc.expiry) < new Date() ? 'text-rose-500 font-bold' : ''}>
+                                    {acc.expiry}
+                                  </span>
+                                ) : 'Vĩnh viễn'}
+                              </td>
+                              <td className="p-4 text-sm text-slate-500">
+                                {((acc as any).registeredDevices?.length || 0)} / {acc.maxDevices}
+                              </td>
                               <td className="p-4 text-right">
                                 <button 
                                   onClick={() => deleteAccount(acc.id)}

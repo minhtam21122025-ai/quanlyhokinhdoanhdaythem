@@ -1,5 +1,5 @@
 {
-  "name": "Hệ thống quản lý dữ liệu cơ sở dạy thêm",
+  "name": "Hệ thống quản lý vận hành cơ sở dạy thêm",
   "description": "Quản lý chương trình dạy thêm bao gồm : Cấu hình HKD, Lớp học, Lịch báo giảng và Sổ đầu bài.",
   "requestFramePermissions": []
 }
