@@ -650,7 +650,54 @@ export default function App() {
   };
 
   const uploadToGoogleSheets = async (programData: Record<string, string>, targetGrades?: number[]) => {
-    alert('Hệ thống đang ở chế độ CHỈ ĐỌC. Vui lòng chỉnh sửa trực tiếp trên Google Sheets.');
+    if (!hkdConfig.scriptUrl) {
+      alert('Vui lòng cấu hình Google Script URL trong phần Cấu hình HKD!');
+      return;
+    }
+    try {
+      setIsAnalyzing(true);
+      
+      // Group data by grade for the payload
+      const programByGrade: Record<number, any[]> = {};
+      Object.entries(programData).forEach(([key, content]) => {
+        const parts = key.split('-');
+        if (parts.length >= 3) {
+          const grade = parseInt(parts[0]);
+          const subject = parts[1];
+          const subSubject = parts[2];
+          const period = parseInt(parts[parts.length - 1]);
+          
+          if (!programByGrade[grade]) programByGrade[grade] = [];
+          programByGrade[grade].push({
+            subject,
+            subSubject,
+            period,
+            content
+          });
+        }
+      });
+
+      const payload = {
+        action: 'updateProgram',
+        program: programByGrade,
+        targetGrades: targetGrades || [6, 7, 8, 9]
+      };
+
+      const response = await fetch(hkdConfig.scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors', // Use no-cors if the script doesn't handle CORS, but it might limit response reading
+        body: JSON.stringify(payload)
+      });
+      
+      // Note: with no-cors we can't read the response, but the request is sent.
+      // For a better experience, the script should handle CORS.
+      alert('Yêu cầu cập nhật chương trình đã được gửi lên Google Sheets!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Lỗi khi tải dữ liệu lên. Vui lòng kiểm tra lại Script URL.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const getLastDayOfMonth = (monthStr: string) => {
@@ -1737,21 +1784,18 @@ export default function App() {
     try {
       setIsAnalyzing(true);
       const payload = {
+        action: 'updateAccounts',
         accounts: userAccounts
       };
-      const response = await fetch(hkdConfig.scriptUrl, {
+      await fetch(hkdConfig.scriptUrl, {
         method: 'POST',
+        mode: 'no-cors',
         body: JSON.stringify(payload)
       });
-      const result = await response.text();
-      if (result === 'Success') {
-        alert('Đã lưu danh sách tài khoản lên Google Sheets thành công!');
-      } else {
-        alert('Lỗi: ' + result);
-      }
+      alert('Yêu cầu cập nhật danh sách tài khoản đã được gửi lên Google Sheets!');
     } catch (error) {
       console.error('Save accounts error:', error);
-      alert('Lỗi khi lưu dữ liệu. Vui lòng kiểm tra lại Script URL và quyền truy cập.');
+      alert('Lỗi khi lưu dữ liệu. Vui lòng kiểm tra lại Script URL.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -2520,11 +2564,11 @@ export default function App() {
                     <ul className="text-sm text-indigo-800 space-y-2 list-disc pl-5">
                       <li>Mở tệp Google Sheets của bạn.</li>
                       <li>Chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
-                      <li>Dán mã <code>code.gs</code> đã được cung cấp vào trình soạn thảo.</li>
+                      <li>Dán mã <code>code.gs</code> phiên bản hỗ trợ 2 chiều vào trình soạn thảo.</li>
                       <li>Nhấn <b>Triển khai</b> &gt; <b>Triển khai mới</b>.</li>
                       <li>Chọn loại là <b>Ứng dụng web</b>, thiết lập "Người có quyền truy cập" là <b>Bất kỳ ai</b>.</li>
                       <li>Sao chép <b>URL ứng dụng web</b> và dán vào ô "Google Script URL" ở trên.</li>
-                      <li><b>Lưu ý:</b> Hệ thống hoạt động theo chế độ đồng bộ 1 chiều (Chỉ đọc từ Sheets). Mọi thay đổi về cấu hình, tài khoản, PPCT cần được thực hiện trực tiếp trên Google Sheets.</li>
+                      <li><b>Lưu ý:</b> Hệ thống hiện hỗ trợ đồng bộ 2 chiều. Bạn có thể sửa trên Sheets rồi nhấn "Đồng bộ" trên App, hoặc sửa trên App rồi nhấn "Lưu lên Sheet".</li>
                     </ul>
                   </div>
                 </div>
@@ -2535,22 +2579,31 @@ export default function App() {
           {activeTab === 'subject_config' && (
             <motion.div key="subject_config" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl flex flex-col gap-8">
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <SectionHeader title="Cấu hình Môn Học" subtitle="Danh mục môn học và phân môn theo khối lớp" />
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={fetchKHDHData}
-                      className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all"
-                    >
-                      <RefreshCw size={16} />
-                      Đồng bộ từ Google Sheets
-                    </button>
-                    <button onClick={addSubjectRow} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all">
-                      <Plus size={16} />
-                      Thêm môn học
-                    </button>
+                  <div className="flex justify-between items-center mb-4">
+                    <SectionHeader title="Cấu hình Môn Học" subtitle="Danh mục môn học và phân môn theo khối lớp" />
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={fetchKHDHData}
+                        className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all"
+                      >
+                        <RefreshCw size={16} />
+                        Đồng bộ từ Sheet
+                      </button>
+                      {isAdmin && (
+                        <button 
+                          onClick={() => uploadToGoogleSheets(khdhData)}
+                          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all"
+                        >
+                          <Save size={16} />
+                          Lưu lên Sheet
+                        </button>
+                      )}
+                      <button onClick={addSubjectRow} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all">
+                        <Plus size={16} />
+                        Thêm môn học
+                      </button>
+                    </div>
                   </div>
-                </div>
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
@@ -2619,10 +2672,24 @@ export default function App() {
             <motion.div key="program" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl">
               <div className="flex justify-between items-center mb-4">
                 <SectionHeader title="Chương trình dạy học" subtitle="Quản lý chương trình dạy học theo khối lớp" />
-                <button onClick={fetchKHDHData} className="bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-amber-700 transition-all shadow-lg shadow-amber-100">
-                  <RefreshCw size={16} />
-                  Đồng bộ từ Google Sheets
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={fetchKHDHData} 
+                    className="bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-amber-700 transition-all shadow-lg shadow-amber-100"
+                  >
+                    <RefreshCw size={16} />
+                    Đồng bộ từ Sheet
+                  </button>
+                  {isAdmin && (
+                    <button 
+                      onClick={() => uploadToGoogleSheets(khdhData)}
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                    >
+                      <Save size={16} />
+                      Lưu lên Sheet
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[6, 7, 8, 9].map(grade => (
