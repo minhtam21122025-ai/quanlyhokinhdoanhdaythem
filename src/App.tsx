@@ -232,23 +232,23 @@ const Dashboard = ({
             <span className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/20 backdrop-blur-md text-sm font-semibold mb-8">
               <Sparkles size={18} /> Hệ thống quản lý dữ liệu cơ sở dạy thêm
             </span>
-            <h1 className="text-4xl lg:text-6xl font-bold mb-8 leading-tight font-sans">
+            <h1 className="text-4xl lg:text-6xl font-normal hover:font-bold transition-all mb-8 leading-tight font-sans">
               Chào mừng trở lại, <br />
               <span className="text-indigo-100">{currentUser?.username}</span>
             </h1>
-            <p className="text-white text-xl mb-12 leading-relaxed opacity-95 font-medium">
+            <p className="text-white text-xl mb-12 leading-relaxed opacity-95 font-normal hover:font-medium transition-all">
               Hệ thống giúp bạn tối ưu hóa quy trình quản lý học sinh, chương trình giảng dạy và tài chính một cách chuyên nghiệp nhất.
             </p>
             <div className="flex flex-wrap gap-8">
               <button 
                 onClick={() => setActiveTab('students')}
-                className="px-10 py-5 bg-white text-indigo-600 rounded-[1.5rem] font-semibold text-xl hover:bg-indigo-50 transition-all flex items-center gap-4 shadow-2xl active:scale-95"
+                className="px-10 py-5 bg-white text-indigo-600 rounded-[1.5rem] font-normal hover:font-bold text-xl hover:bg-indigo-50 transition-all flex items-center gap-4 shadow-2xl active:scale-95"
               >
                 <Plus size={32} /> Thêm học sinh
               </button>
               <button 
                 onClick={() => setActiveTab('finance')}
-                className="px-10 py-5 bg-indigo-500/30 backdrop-blur-md border-2 border-white/20 text-white rounded-[1.5rem] font-semibold text-xl hover:bg-white/20 transition-all flex items-center gap-4 active:scale-95"
+                className="px-10 py-5 bg-indigo-500/30 backdrop-blur-md border-2 border-white/20 text-white rounded-[1.5rem] font-normal hover:font-bold text-xl hover:bg-white/20 transition-all flex items-center gap-4 active:scale-95"
               >
                 Xem báo cáo tài chính
               </button>
@@ -276,12 +276,12 @@ const Dashboard = ({
               <div className={`p-4 rounded-2xl ${stat.color} group-hover:scale-110 transition-transform ring-1 ring-slate-100`}>
                 {React.cloneElement(stat.icon as React.ReactElement, { size: 32 })}
               </div>
-              <span className="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl ring-1 ring-emerald-100">
+              <span className="text-sm font-normal group-hover:font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl ring-1 ring-emerald-100 transition-all">
                 {stat.trend}
               </span>
             </div>
-            <p className="text-slate-600 text-lg font-semibold mb-3">{stat.label}</p>
-            <h3 className="text-4xl font-bold text-slate-900 font-sans">{stat.value}</h3>
+            <p className="text-slate-600 text-lg font-normal group-hover:font-semibold mb-3 transition-all">{stat.label}</p>
+            <h3 className="text-4xl font-normal group-hover:font-bold text-slate-900 font-sans transition-all">{stat.value}</h3>
           </motion.div>
         ))}
       </div>
@@ -318,15 +318,6 @@ const Dashboard = ({
             onClick={() => setActiveTab('finance')}
             color="emerald"
           />
-          {currentUser?.role === 'Quản trị viên' && (
-            <ModuleCard 
-              title="Quản lý tài khoản"
-              desc="Phân quyền người dùng, quản lý thiết bị truy cập và bảo mật hệ thống toàn diện."
-              image="https://picsum.photos/seed/security/800/600"
-              onClick={() => setActiveTab('accounts')}
-              color="rose"
-            />
-          )}
         </div>
 
         {/* Charts Section */}
@@ -432,9 +423,9 @@ const ModuleCard = ({ title, desc, image, onClick, color }: {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
       </div>
       <div className="p-8 flex-1 flex flex-col">
-        <h3 className="text-2xl font-bold text-slate-900 mb-4 font-sans">{title}</h3>
-        <p className="text-slate-700 text-lg font-medium leading-relaxed mb-8 opacity-80 flex-1">{desc}</p>
-        <div className="flex items-center gap-4 text-lg font-bold text-indigo-600 group-hover:translate-x-3 transition-transform">
+        <h3 className="text-2xl font-normal group-hover:font-bold text-slate-900 mb-4 font-sans transition-all">{title}</h3>
+        <p className="text-slate-700 text-lg font-normal group-hover:font-medium leading-relaxed mb-8 opacity-80 flex-1 transition-all">{desc}</p>
+        <div className="flex items-center gap-4 text-lg font-normal group-hover:font-bold text-indigo-600 group-hover:translate-x-3 transition-transform transition-all">
           Truy cập ngay <ArrowRight size={28} />
         </div>
       </div>
@@ -2139,33 +2130,33 @@ export default function App() {
               <GraduationCap className="text-white w-16 h-16" />
             </div>
             <div className="text-center">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-tight">Hệ thống quản lý <br/>Dữ liệu dạy thêm</h1>
-              <p className="text-xl text-slate-600 font-bold mt-2">Hệ thống quản lý nội bộ</p>
+              <h1 className="text-4xl font-normal hover:font-bold transition-all text-slate-900 tracking-tighter leading-tight font-sans">Hệ thống quản lý <br/>Dữ liệu dạy thêm</h1>
+              <p className="text-xl text-slate-600 font-normal hover:font-medium transition-all mt-2">Hệ thống quản lý nội bộ</p>
             </div>
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
             <div className="flex flex-col gap-3">
-              <label className="text-lg font-black text-slate-800 uppercase tracking-widest">Tài khoản</label>
+              <label className="text-lg font-normal hover:font-bold transition-all text-slate-800 uppercase tracking-widest">Tài khoản</label>
               <input 
                 type="text" 
                 value={loginUsername} 
                 onChange={(e) => setLoginUsername(e.target.value)}
-                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-medium transition-all placeholder:text-slate-400" 
+                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-normal transition-all placeholder:text-slate-400" 
                 placeholder="Nhập tài khoản..."
               />
             </div>
             <div className="flex flex-col gap-3">
-              <label className="text-lg font-black text-slate-800 uppercase tracking-widest">Mật khẩu</label>
+              <label className="text-lg font-normal hover:font-bold transition-all text-slate-800 uppercase tracking-widest">Mật khẩu</label>
               <input 
                 type="password" 
                 value={loginPassword} 
                 onChange={(e) => setLoginPassword(e.target.value)}
-                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-medium transition-all placeholder:text-slate-400" 
+                className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-900 text-xl font-normal transition-all placeholder:text-slate-400" 
                 placeholder="Nhập mật khẩu..."
               />
             </div>
-            <button type="submit" className="mt-6 bg-indigo-600 text-white py-5 rounded-[1.5rem] text-2xl font-black hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-200 flex items-center justify-center gap-4 active:scale-95">
+            <button type="submit" className="mt-6 bg-indigo-600 text-white py-5 rounded-[1.5rem] text-2xl font-normal hover:font-bold transition-all shadow-2xl shadow-indigo-200 flex items-center justify-center gap-4 active:scale-95">
               <LogIn size={28} />
               Đăng nhập hệ thống
             </button>
@@ -2195,29 +2186,24 @@ export default function App() {
           </div>
 
           <nav className="hidden lg:flex items-center gap-4">
-            <button onClick={() => setActiveTab('dashboard')} className={`nav-link ${activeTab === 'dashboard' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+            <button onClick={() => setActiveTab('dashboard')} className={`nav-link ${activeTab === 'dashboard' ? 'nav-link-active' : 'nav-link-inactive'} font-normal hover:font-bold transition-all`}>
               <Home size={28} /> Trang chủ
             </button>
-            <button onClick={() => setActiveTab('students')} className={`nav-link ${activeTab === 'students' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <Users size={28} /> Học sinh
-            </button>
-            <button onClick={() => setActiveTab('program')} className={`nav-link ${activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <ClipboardList size={28} /> Chương trình
-            </button>
-            <button onClick={() => setActiveTab('finance')} className={`nav-link ${activeTab === 'finance' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <DollarSign size={28} /> Tài chính
-            </button>
-            <button onClick={() => setActiveTab('reports')} className={`nav-link ${activeTab === 'reports' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-              <BarChart3 size={28} /> Báo cáo
-            </button>
-            <button onClick={() => setActiveTab('config_hkd')} className={`nav-link ${activeTab === 'config_hkd' ? 'nav-link-active' : 'nav-link-inactive'}`}>
+            <button onClick={() => setActiveTab('config_hkd')} className={`nav-link ${activeTab === 'config_hkd' ? 'nav-link-active' : 'nav-link-inactive'} font-normal hover:font-bold transition-all`}>
               <Settings size={28} /> Tùy chỉnh
             </button>
-            {isAdmin && (
-              <button onClick={() => setActiveTab('accounts')} className={`nav-link ${activeTab === 'accounts' ? 'nav-link-active' : 'nav-link-inactive'}`}>
-                <ShieldCheck size={28} /> Tài khoản
-              </button>
-            )}
+            <button onClick={() => setActiveTab('program')} className={`nav-link ${activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config' ? 'nav-link-active' : 'nav-link-inactive'} font-normal hover:font-bold transition-all`}>
+              <ClipboardList size={28} /> Chương trình
+            </button>
+            <button onClick={() => setActiveTab('finance')} className={`nav-link ${activeTab === 'finance' ? 'nav-link-active' : 'nav-link-inactive'} font-normal hover:font-bold transition-all`}>
+              <DollarSign size={28} /> Tài chính
+            </button>
+            <button onClick={() => setActiveTab('students')} className={`nav-link ${activeTab === 'students' ? 'nav-link-active' : 'nav-link-inactive'} font-normal hover:font-bold transition-all`}>
+              <Users size={28} /> Học sinh
+            </button>
+            <button onClick={() => setActiveTab('reports')} className={`nav-link ${activeTab === 'reports' ? 'nav-link-active' : 'nav-link-inactive'} font-normal hover:font-bold transition-all`}>
+              <BarChart3 size={28} /> Báo cáo
+            </button>
           </nav>
         </div>
 
@@ -2258,10 +2244,11 @@ export default function App() {
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-3 flex items-center justify-around shadow-[0_-10px_40px_rgb(0,0,0,0.08)]">
-        <MobileNavLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home size={26} />} label="Home" />
+        <MobileNavLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home size={26} />} label="Trang chủ" />
+        <MobileNavLink active={activeTab === 'config_hkd'} onClick={() => setActiveTab('config_hkd')} icon={<Settings size={26} />} label="Tùy chỉnh" />
+        <MobileNavLink active={activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config'} onClick={() => setActiveTab('program')} icon={<ClipboardList size={26} />} label="Chương trình" />
+        <MobileNavLink active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon={<DollarSign size={26} />} label="Tài chính" />
         <MobileNavLink active={activeTab === 'students'} onClick={() => setActiveTab('students')} icon={<Users size={26} />} label="Học sinh" />
-        <MobileNavLink active={activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config'} onClick={() => setActiveTab('program')} icon={<ClipboardList size={26} />} label="Dạy" />
-        <MobileNavLink active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon={<DollarSign size={26} />} label="Tiền" />
         <MobileNavLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<BarChart3 size={26} />} label="Báo cáo" />
       </nav>
 
@@ -3765,6 +3752,19 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 py-8 px-6 sm:px-12 mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-slate-500 font-normal hover:font-bold transition-all duration-300">
+            Copyright © Dao Minh Tam - Zalo: 0366000555
+          </p>
+          <div className="flex items-center gap-6">
+            <span className="text-slate-400 text-sm font-normal hover:font-bold transition-all">Version 2.0.0</span>
+            <span className="text-slate-400 text-sm font-normal hover:font-bold transition-all">Hệ thống quản lý dữ liệu cơ sở dạy thêm</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -3775,10 +3775,10 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-4 p-5 rounded-2xl transition-all ${active ? 'bg-indigo-50 text-indigo-700 shadow-md ring-1 ring-indigo-200' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'}`}
+      className={`flex items-center gap-4 p-5 rounded-2xl transition-all group ${active ? 'bg-indigo-50 text-indigo-700 shadow-md ring-1 ring-indigo-200' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'}`}
     >
       <span className={`${active ? 'text-indigo-600' : 'text-slate-600'}`}>{React.cloneElement(icon as React.ReactElement, { size: 28 })}</span>
-      <span className="font-black text-xl tracking-tight">{label}</span>
+      <span className={`text-xl tracking-tight transition-all duration-300 group-hover:font-bold ${active ? 'font-bold' : 'font-normal'}`}>{label}</span>
     </button>
   );
 }
@@ -3787,12 +3787,12 @@ function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onCl
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-2 py-3 px-5 rounded-2xl transition-all ${active ? 'text-indigo-600 scale-110' : 'text-slate-500'}`}
+      className={`flex flex-col items-center gap-2 py-3 px-5 rounded-2xl transition-all group ${active ? 'text-indigo-600 scale-110' : 'text-slate-500'}`}
     >
-      <div className={`p-3 rounded-2xl transition-all ${active ? 'bg-indigo-50 shadow-md ring-1 ring-indigo-100' : ''}`}>
+      <div className={`p-3 rounded-2xl transition-all ${active ? 'bg-indigo-50 shadow-md ring-1 ring-indigo-100' : 'group-hover:bg-slate-50'}`}>
         {React.cloneElement(icon as React.ReactElement, { size: 32 })}
       </div>
-      <span className={`text-[13px] font-semibold ${active ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
+      <span className={`text-[13px] transition-all duration-300 group-hover:font-bold ${active ? 'font-bold opacity-100' : 'font-normal opacity-70'}`}>{label}</span>
     </button>
   );
 }
@@ -3800,8 +3800,8 @@ function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onCl
 function SectionHeader({ title, subtitle }: { title: string, subtitle: string }) {
   return (
     <div className="mb-12">
-      <h2 className="text-3xl font-bold text-slate-900 font-sans leading-tight">{title}</h2>
-      <p className="text-slate-500 text-lg font-medium mt-3 opacity-90">{subtitle}</p>
+      <h2 className="text-3xl font-normal hover:font-bold transition-all text-slate-900 font-sans leading-tight">{title}</h2>
+      <p className="text-slate-500 text-lg font-normal hover:font-medium transition-all mt-3 opacity-90">{subtitle}</p>
     </div>
   );
 }
@@ -3809,13 +3809,13 @@ function SectionHeader({ title, subtitle }: { title: string, subtitle: string })
 function InputGroup({ label, value, onChange, placeholder, type = "text" }: { label: string, value: string, onChange: (v: string) => void, placeholder: string, type?: string }) {
   return (
     <div className="flex flex-col gap-3">
-      <label className="text-lg font-black text-slate-800 uppercase tracking-widest">{label}</label>
+      <label className="text-lg font-normal hover:font-bold transition-all text-slate-800 uppercase tracking-widest">{label}</label>
       <input 
         type={type} 
         value={value} 
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-slate-900 font-black text-xl placeholder:text-slate-400 placeholder:font-medium"
+        className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-slate-900 font-normal text-xl placeholder:text-slate-400 placeholder:font-normal"
       />
     </div>
   );
