@@ -44,7 +44,9 @@ import {
   TrendingUp,
   Activity,
   Award,
-  ShieldCheck
+  ShieldCheck,
+  AlertCircle,
+  Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -611,15 +613,31 @@ export default function App() {
       if (data.accounts && Array.isArray(data.accounts)) {
         const syncedAccounts = data.accounts.map((acc: any, idx: number) => {
           // Find existing account to preserve registeredDevices
-          const existing = userAccounts.find(u => u.username === acc.username);
+          const existing = userAccounts.find(u => 
+            String(u.username).trim().toLowerCase() === String(acc.username).trim().toLowerCase()
+          );
           return {
             ...acc,
             id: acc.id || existing?.id || `acc_${idx}_${Date.now()}`,
+            username: String(acc.username || '').trim(),
+            password: String(acc.password || '').trim(),
+            role: acc.role || 'Giáo viên',
+            expiry: acc.expiry || '',
+            maxDevices: parseInt(acc.maxDevices) || 1,
             registeredDevices: acc.registeredDevices || existing?.registeredDevices || []
           };
         });
-        setUserAccounts(syncedAccounts);
-        localStorage.setItem('user_accounts', JSON.stringify(syncedAccounts));
+        
+        // Merge: Keep local accounts that are not in the synced list
+        const localOnly = userAccounts.filter(local => 
+          !syncedAccounts.some(synced => 
+            synced.username.toLowerCase() === local.username.toLowerCase()
+          )
+        );
+        
+        const finalAccounts = [...syncedAccounts, ...localOnly];
+        setUserAccounts(finalAccounts);
+        localStorage.setItem('user_accounts', JSON.stringify(finalAccounts));
       }
       
       alert('Đã đồng bộ dữ liệu từ Google Sheets thành công!');
@@ -674,6 +692,22 @@ export default function App() {
     alert('Đã xóa toàn bộ dữ liệu tài chính hiện tại!');
   };
 
+  const addStudent = (student: Omit<Student, 'id'>) => {
+    const newStudent: Student = {
+      ...student,
+      id: crypto.randomUUID()
+    };
+    setStudents(prev => [...prev, newStudent]);
+  };
+
+  const updateStudent = (id: string, updates: Partial<Student>) => {
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const deleteStudent = (id: string) => {
+    setStudents(prev => prev.filter(s => s.id !== id));
+  };
+
   const analyzeStudentList = async (data: any[][]) => {
     setIsAnalyzing(true);
     try {
@@ -705,6 +739,7 @@ export default function App() {
       const result = JSON.parse(response.text);
       if (Array.isArray(result)) {
         const newStudents: Student[] = result.map((s: any) => ({
+          id: crypto.randomUUID(),
           name: String(s.name || ''),
           grade: String(s.grade || ''),
           school: String(s.school || ''),
@@ -712,7 +747,7 @@ export default function App() {
           phone: String(s.phone || ''),
           subjects: String(s.subjects || ''),
           registrationDate: String(s.registrationDate || ''),
-          id: Math.random().toString(36).substr(2, 9)
+          fee: 0
         }));
         setStudents(prev => [...prev, ...newStudents]);
         alert(`Đã phân tích và thêm ${newStudents.length} học sinh thành công!`);
@@ -726,14 +761,15 @@ export default function App() {
         const row = data[i];
         if (row[1]) {
           manualStudents.push({
-            id: Math.random().toString(36).substr(2, 9),
+            id: crypto.randomUUID(),
             name: String(row[1] || ''),
             grade: String(row[2] || ''),
             school: String(row[3] || ''),
             parentName: String(row[4] || ''),
             phone: String(row[5] || ''),
             subjects: String(row[6] || ''),
-            registrationDate: String(row[7] || '')
+            registrationDate: String(row[7] || ''),
+            fee: 0
           });
         }
       }
@@ -1574,6 +1610,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
+  const [editingAccount, setEditingAccount] = useState<UserAccount | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
 
   useEffect(() => {
@@ -1586,6 +1623,7 @@ export default function App() {
   }, []);
   const [loginUsername, setLoginUsername] = useState('admin');
   const [loginPassword, setLoginPassword] = useState('123456');
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [newAccount, setNewAccount] = useState<Partial<UserAccount>>({
     username: '',
@@ -1630,16 +1668,39 @@ export default function App() {
       alert('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
       return;
     }
-    const account: UserAccount = {
-      id: crypto.randomUUID(),
-      index: userAccounts.length + 1,
-      username: newAccount.username!,
-      password: newAccount.password!,
-      role: newAccount.role || 'Giáo viên',
-      expiry: newAccount.expiry || '',
-      maxDevices: newAccount.maxDevices || 1
-    };
-    setUserAccounts(prev => [...prev, account]);
+
+    if (editingAccount) {
+      const updatedAccounts = userAccounts.map(acc => {
+        if (acc.id === editingAccount.id) {
+          return {
+            ...acc,
+            username: newAccount.username!.trim(),
+            password: newAccount.password!.trim(),
+            role: newAccount.role || 'Giáo viên',
+            expiry: newAccount.expiry || '',
+            maxDevices: newAccount.maxDevices || 1
+          };
+        }
+        return acc;
+      });
+      setUserAccounts(updatedAccounts);
+      setEditingAccount(null);
+      alert('Đã cập nhật tài khoản thành công!');
+    } else {
+      const account: UserAccount = {
+        id: crypto.randomUUID(),
+        index: userAccounts.length + 1,
+        username: newAccount.username!.trim(),
+        password: newAccount.password!.trim(),
+        role: newAccount.role || 'Giáo viên',
+        expiry: newAccount.expiry || '',
+        maxDevices: newAccount.maxDevices || 1,
+        registeredDevices: []
+      };
+      setUserAccounts(prev => [...prev, account]);
+      alert('Đã thêm tài khoản mới thành công!');
+    }
+
     setNewAccount({
       username: '',
       password: '',
@@ -1647,6 +1708,19 @@ export default function App() {
       expiry: '',
       maxDevices: 1
     });
+  };
+
+  const startEditAccount = (acc: UserAccount) => {
+    setEditingAccount(acc);
+    setNewAccount({
+      username: acc.username,
+      password: acc.password,
+      role: acc.role,
+      expiry: acc.expiry,
+      maxDevices: acc.maxDevices
+    });
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const deleteAccount = (id: string) => {
@@ -2131,12 +2205,13 @@ export default function App() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     
     const username = loginUsername.trim();
     const password = loginPassword.trim();
 
     if (!username || !password) {
-      alert('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
+      setLoginError('Vui lòng nhập đầy đủ tài khoản và mật khẩu!');
       return;
     }
 
@@ -2159,31 +2234,39 @@ export default function App() {
     }
 
     // 2. Check synced accounts
-    const user = userAccounts.find(u => 
-      u.username.trim() === username && 
-      (u.password || '').toString().trim() === password
-    );
+    const user = userAccounts.find(u => {
+      const uName = String(u.username || '').trim().toLowerCase();
+      const uPass = String(u.password || '').trim();
+      return uName === username.toLowerCase() && uPass === password;
+    });
 
     if (!user) {
-      alert('Tài khoản hoặc mật khẩu không chính xác!');
+      setLoginError('Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!');
       return;
     }
 
     // 3. Check expiry
-    if (user.expiry) {
-      const expiryDate = new Date(user.expiry);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (today > expiryDate) {
-        alert('Tài khoản của bạn đã hết hạn sử dụng. Vui lòng liên hệ quản trị viên!');
-        return;
+    if (user.expiry && user.expiry.trim() !== '') {
+      try {
+        const expiryDate = new Date(user.expiry);
+        if (!isNaN(expiryDate.getTime())) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (today > expiryDate) {
+            setLoginError('Tài khoản của bạn đã hết thời hạn sử dụng. Vui lòng liên hệ Admin để gia hạn!');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Expiry check error:', e);
       }
     }
 
     // 4. Check device limit
+    const maxAllowed = parseInt(String(user.maxDevices)) || 1;
     const registeredDevices = user.registeredDevices || [];
-    if (!registeredDevices.includes(deviceId) && registeredDevices.length >= user.maxDevices) {
-      alert(`Tài khoản đã đạt giới hạn số máy truy cập (${user.maxDevices}). Vui lòng liên hệ quản trị viên!`);
+    if (!registeredDevices.includes(deviceId) && registeredDevices.length >= maxAllowed) {
+      setLoginError(`Tài khoản đã đạt giới hạn số máy truy cập (${maxAllowed}). Vui lòng liên hệ Admin để hỗ trợ!`);
       return;
     }
 
@@ -2200,7 +2283,7 @@ export default function App() {
     }
 
     setCurrentUser(user);
-    setIsAdmin(user.role === 'Quản trị viên');
+    setIsAdmin(String(user.role || '').trim() === 'Quản trị viên');
     setIsLoggedIn(true);
     setActiveTab('dashboard');
   };
@@ -2224,6 +2307,16 @@ export default function App() {
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-6">
+            {loginError && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-rose-50 border border-rose-200 text-rose-600 p-5 rounded-2xl text-lg font-bold flex items-center gap-3"
+              >
+                <AlertCircle size={24} />
+                {loginError}
+              </motion.div>
+            )}
             <div className="flex flex-col gap-3">
               <label className="text-lg font-normal hover:font-bold transition-all text-slate-800 uppercase tracking-widest">Tài khoản</label>
               <input 
@@ -2405,18 +2498,20 @@ export default function App() {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." />
-                    <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." />
+                    <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => isAdmin && setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." />
+                    <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => isAdmin && setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputGroup label="Mã số thuế" value={hkdConfig.taxId} onChange={v => setHkdConfig({...hkdConfig, taxId: v})} placeholder="Nhập mã số thuế..." />
-                    <InputGroup label="Google Script URL" value={hkdConfig.scriptUrl || ''} onChange={v => setHkdConfig({...hkdConfig, scriptUrl: v})} placeholder="https://script.google.com/macros/s/.../exec" />
+                    <InputGroup label="Mã số thuế" value={hkdConfig.taxId} onChange={v => isAdmin && setHkdConfig({...hkdConfig, taxId: v})} placeholder="Nhập mã số thuế..." />
+                    <InputGroup label="Google Script URL" value={isAdmin ? (hkdConfig.scriptUrl || '') : '********'} onChange={v => isAdmin && setHkdConfig({...hkdConfig, scriptUrl: v})} placeholder="https://script.google.com/macros/s/.../exec" />
                   </div>
-                  <InputGroup label="Địa chỉ" value={hkdConfig.address} onChange={v => setHkdConfig({...hkdConfig, address: v})} placeholder="Địa chỉ chi tiết..." />
-                  <button onClick={saveConfig} className="mt-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 w-fit">
-                    <Save size={20} />
-                    Lưu cấu hình
-                  </button>
+                  <InputGroup label="Địa chỉ" value={hkdConfig.address} onChange={v => isAdmin && setHkdConfig({...hkdConfig, address: v})} placeholder="Địa chỉ chi tiết..." />
+                  {isAdmin && (
+                    <button onClick={saveConfig} className="mt-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 w-fit">
+                      <Save size={20} />
+                      Lưu cấu hình
+                    </button>
+                  )}
 
                   <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mt-6">
                     <h4 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
@@ -3325,7 +3420,7 @@ export default function App() {
                                       const result = JSON.parse(response.text);
                                       if (Array.isArray(result)) {
                                         const mapped = result.map(item => ({
-                                          id: Math.random().toString(36).substr(2, 9),
+                                          id: crypto.randomUUID(),
                                           name: String(item.name || ''),
                                           grade: String(item.grade || '6'),
                                           school: '',
@@ -3335,7 +3430,7 @@ export default function App() {
                                           registrationDate: new Date().toISOString().split('T')[0],
                                           fee: parseFloat(String(item.totalFee || '0').replace(/[^0-9]/g, ''))
                                         }));
-                                        setStudents(mapped);
+                                        setStudents(prev => [...prev, ...mapped]);
                                         setUploadedFinanceFiles(prev => prev + 1);
                                         setIsRevenueFileUploaded(true);
                                         setFinanceSubTab('data');
@@ -3355,7 +3450,7 @@ export default function App() {
                                         const totalFee = row[36];
                                         if (!name || name === 'HỌ VÀ TÊN') return null;
                                         return {
-                                          id: `manual-${index}`,
+                                          id: crypto.randomUUID(),
                                           name: String(name),
                                           grade: String(grade || '6'),
                                           school: '',
@@ -3368,7 +3463,7 @@ export default function App() {
                                       }).filter(s => s !== null) as Student[];
                                       
                                       if (manualMapped.length > 0) {
-                                        setStudents(manualMapped);
+                                        setStudents(prev => [...prev, ...manualMapped]);
                                         setUploadedFinanceFiles(prev => prev + 1);
                                         setIsRevenueFileUploaded(true);
                                         setFinanceSubTab('data');
@@ -3478,7 +3573,7 @@ export default function App() {
                       </div>
                       <div className="flex gap-4">
                         <button 
-                          onClick={() => setStudents([...students, { id: Date.now().toString(), name: '', grade: '', school: '', parentName: '', phone: '', subjects: '', registrationDate: new Date().toISOString().split('T')[0], fee: 0 }])}
+                          onClick={() => addStudent({ name: '', grade: '', school: '', parentName: '', phone: '', subjects: '', registrationDate: new Date().toISOString().split('T')[0], fee: 0 })}
                           className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-black text-lg flex items-center gap-3 hover:bg-indigo-100 transition-all shadow-sm"
                         >
                           <Plus size={24} /> Thêm học sinh
@@ -3512,11 +3607,7 @@ export default function App() {
                                   <input 
                                     type="text" 
                                     value={s.name} 
-                                    onChange={(e) => {
-                                      const newStudents = [...students];
-                                      newStudents[idx].name = e.target.value;
-                                      setStudents(newStudents);
-                                    }}
+                                    onChange={(e) => updateStudent(s.id, { name: e.target.value })}
                                     className="w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-bold text-slate-800 transition-all"
                                     placeholder="Họ tên..."
                                   />
@@ -3525,11 +3616,7 @@ export default function App() {
                                   <input 
                                     type="text" 
                                     value={s.grade} 
-                                    onChange={(e) => {
-                                      const newStudents = [...students];
-                                      newStudents[idx].grade = e.target.value;
-                                      setStudents(newStudents);
-                                    }}
+                                    onChange={(e) => updateStudent(s.id, { grade: e.target.value })}
                                     className="w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-bold text-slate-800 transition-all"
                                     placeholder="Lớp..."
                                   />
@@ -3539,11 +3626,7 @@ export default function App() {
                                     <input 
                                       type="number" 
                                       value={s.fee} 
-                                      onChange={(e) => {
-                                        const newStudents = [...students];
-                                        newStudents[idx].fee = parseInt(e.target.value) || 0;
-                                        setStudents(newStudents);
-                                      }}
+                                      onChange={(e) => updateStudent(s.id, { fee: parseInt(e.target.value) || 0 })}
                                       className={`w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-black transition-all ${s.fee === 0 ? 'text-rose-500' : 'text-indigo-600'}`}
                                       placeholder="Số tiền..."
                                     />
@@ -3556,7 +3639,7 @@ export default function App() {
                                 </td>
                                 <td className="p-6">
                                   <button 
-                                    onClick={() => setStudents(students.filter(st => st.id !== s.id))}
+                                    onClick={() => deleteStudent(s.id)}
                                     className="p-4 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
                                   >
                                     <Trash2 size={24} />
@@ -3707,7 +3790,7 @@ export default function App() {
             </motion.div>
           )}
 
-          {activeTab === 'accounts' && (
+          {activeTab === 'accounts' && isAdmin && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
@@ -3795,10 +3878,22 @@ export default function App() {
                     </div>
                     <button 
                       onClick={addAccount}
-                      className="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                      className={`${editingAccount ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-4 py-2 rounded-lg transition-all shadow-md flex items-center gap-2`}
                     >
-                      <Plus size={20} />
+                      {editingAccount ? <Save size={20} /> : <Plus size={20} />}
+                      {editingAccount ? 'Cập nhật' : 'Thêm mới'}
                     </button>
+                    {editingAccount && (
+                      <button 
+                        onClick={() => {
+                          setEditingAccount(null);
+                          setNewAccount({ username: '', password: '', role: 'Giáo viên', expiry: '', maxDevices: 1 });
+                        }}
+                        className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-300 transition-all"
+                      >
+                        Hủy
+                      </button>
+                    )}
                   </div>
 
                   <div className="overflow-x-auto">
@@ -3840,10 +3935,18 @@ export default function App() {
                               <td className="p-4 text-sm text-slate-500">
                                 {((acc as any).registeredDevices?.length || 0)} / {acc.maxDevices}
                               </td>
-                              <td className="p-4 text-right">
+                              <td className="p-4 text-right flex justify-end gap-2">
+                                <button 
+                                  onClick={() => startEditAccount(acc)}
+                                  className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-all"
+                                  title="Sửa tài khoản"
+                                >
+                                  <Edit2 size={16} />
+                                </button>
                                 <button 
                                   onClick={() => deleteAccount(acc.id)}
                                   className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-all"
+                                  title="Xóa tài khoản"
                                 >
                                   <Trash2 size={16} />
                                 </button>
