@@ -142,18 +142,39 @@ const DAY_OPTIONS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Th�
 
 const GOOGLE_SCRIPT_CODE = `/**
  * Google Apps Script for connecting React App to Google Sheets
- * This script handles initialization of sheets and provides a read-only endpoint.
+ * This script handles 2-way synchronization (reading and writing) of data.
  */
 
-const SPREADSHEET_ID = "1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ";
+// Leave blank to use the spreadsheet where the script is bound, 
+// or paste the ID from your spreadsheet URL
+const SPREADSHEET_ID = ""; 
+
+function getSS() {
+  try {
+    if (SPREADSHEET_ID) {
+      return SpreadsheetApp.openById(SPREADSHEET_ID);
+    }
+    return SpreadsheetApp.getActiveSpreadsheet();
+  } catch (e) {
+    console.error("Error opening spreadsheet: " + e.message);
+    return null;
+  }
+}
 
 function doGet(e) {
+  const ss = getSS();
+  if (!ss) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Không thể mở Google Sheet. Vui lòng kiểm tra lại SPREADSHEET_ID hoặc quyền truy cập." 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   // Check if e is defined (prevents error when running manually in Apps Script editor)
   if (!e || !e.parameter) {
     return ContentService.createTextOutput("Script is running correctly. Please access it via the Web App URL from the React application.").setMimeType(ContentService.MimeType.TEXT);
   }
 
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const action = e.parameter.action;
 
   // Initialize sheets if they don't exist
@@ -168,21 +189,49 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  // Read-only mode: Disable saving from system to sheets
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: false, 
-    message: "Hệ thống đang ở chế độ CHỈ ĐỌC. Vui lòng chỉnh sửa trực tiếp trên Google Sheets." 
-  })).setMimeType(ContentService.MimeType.JSON);
+  const ss = getSS();
+  if (!ss) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Không thể mở Google Sheet." 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    const action = payload.action;
+
+    initializeSheets(ss);
+
+    if (action === 'updateAccounts') {
+      return updateAccounts(ss, payload.accounts);
+    } else if (action === 'updateProgram') {
+      return updateProgram(ss, payload.program, payload.targetGrades);
+    } else if (action === 'updateSubjects') {
+      return updateSubjects(ss, payload.subjects);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Hành động không hợp lệ." 
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Lỗi xử lý dữ liệu: " + error.message 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function initializeSheets(ss) {
   const sheets = [
-    { name: "Tài khoản đăng nhập", headers: ["ID", "Username", "Password", "Role", "Expiry", "MaxDevices"] },
+    { name: "Tài khoản đăng nhập", headers: ["ID", "Username", "Password", "Role", "Expiry", "MaxDevices", "RegisteredDevices"] },
     { name: "Cấu hình", headers: ["Grade", "Subject", "SubSubject"] },
-    { name: "PPCT Khối 6", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
-    { name: "PPCT Khối 7", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
-    { name: "PPCT Khối 8", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
-    { name: "PPCT Khối 9", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] }
+    { name: "PPCT Khối 6", headers: ["Subject", "SubSubject", "Period", "Content"] },
+    { name: "PPCT Khối 7", headers: ["Subject", "SubSubject", "Period", "Content"] },
+    { name: "PPCT Khối 8", headers: ["Subject", "SubSubject", "Period", "Content"] },
+    { name: "PPCT Khối 9", headers: ["Subject", "SubSubject", "Period", "Content"] }
   ];
 
   sheets.forEach(s => {
@@ -193,7 +242,7 @@ function initializeSheets(ss) {
       
       // Add a default admin account if it's the account sheet
       if (s.name === "Tài khoản đăng nhập") {
-        sheet.appendRow(["admin-01", "admin", "123456", "Quản trị viên", "", "999"]);
+        sheet.appendRow(["admin-01", "admin", "123456", "Quản trị viên", "", "999", "[]"]);
       }
     }
   });
@@ -227,17 +276,81 @@ function getSheetData(ss, sheetName) {
   return rows.map(row => {
     const obj = {};
     headers.forEach((header, i) => {
-      // Map headers to keys used in the React app
       let key = header.toLowerCase();
       if (key === 'subsubject') key = 'subSubject';
-      if (key === 'parentname') key = 'parentName';
-      if (key === 'registrationdate') key = 'registrationDate';
       if (key === 'maxdevices') key = 'maxDevices';
+      if (key === 'registereddevices') key = 'registeredDevices';
       
-      obj[key] = row[i];
+      let val = row[i];
+      if (key === 'registeredDevices' && typeof val === 'string') {
+        try { val = JSON.parse(val); } catch (e) { val = []; }
+      }
+      
+      obj[key] = val;
     });
     return obj;
   });
+}
+
+function updateAccounts(ss, accounts) {
+  const sheet = ss.getSheetByName("Tài khoản đăng nhập");
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Sheet không tồn tại" })).setMimeType(ContentService.MimeType.JSON);
+  
+  sheet.clear();
+  const headers = ["ID", "Username", "Password", "Role", "Expiry", "MaxDevices", "RegisteredDevices"];
+  sheet.appendRow(headers);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
+  
+  accounts.forEach(acc => {
+    sheet.appendRow([
+      acc.id,
+      acc.username,
+      acc.password,
+      acc.role,
+      acc.expiry,
+      acc.maxDevices,
+      JSON.stringify(acc.registeredDevices || [])
+    ]);
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã cập nhật tài khoản" })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function updateProgram(ss, program, targetGrades) {
+  const grades = targetGrades || [6, 7, 8, 9];
+  
+  grades.forEach(grade => {
+    const sheetName = "PPCT Khối " + grade;
+    const sheet = ss.getSheetByName(sheetName);
+    if (sheet) {
+      sheet.clear();
+      const headers = ["Subject", "SubSubject", "Period", "Content"];
+      sheet.appendRow(headers);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
+      
+      const gradeData = program[grade] || [];
+      gradeData.forEach(item => {
+        sheet.appendRow([item.subject, item.subSubject, item.period, item.content]);
+      });
+    }
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã cập nhật chương trình" })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function updateSubjects(ss, subjects) {
+  const sheet = ss.getSheetByName("Cấu hình");
+  if (sheet) {
+    sheet.clear();
+    const headers = ["Grade", "Subject", "SubSubject"];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
+    
+    subjects.forEach(s => {
+      sheet.appendRow([s.grade, s.subject, s.subSubject]);
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã cập nhật môn học" })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function handleLogin(ss, username, password) {
@@ -250,6 +363,156 @@ function handleLogin(ss, username, password) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Sai tài khoản hoặc mật khẩu" })).setMimeType(ContentService.MimeType.JSON);
   }
 }`;
+
+const USER_GOOGLE_SCRIPT_CODE = `/**
+ * Google Apps Script for connecting React App to Google Sheets (User Version)
+ * This script handles 2-way synchronization (reading and writing) of data.
+ */
+
+const SPREADSHEET_ID = ""; 
+
+function getSS() {
+  try {
+    if (SPREADSHEET_ID) {
+      return SpreadsheetApp.openById(SPREADSHEET_ID);
+    }
+    return SpreadsheetApp.getActiveSpreadsheet();
+  } catch (e) {
+    console.error("Error opening spreadsheet: " + e.message);
+    return null;
+  }
+}
+
+function doGet(e) {
+  const ss = getSS();
+  if (!ss) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Không thể mở Google Sheet. Vui lòng kiểm tra lại SPREADSHEET_ID hoặc quyền truy cập." 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (!e || !e.parameter) {
+    return ContentService.createTextOutput("Script is running correctly. Please access it via the Web App URL from the React application.").setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  const action = e.parameter.action;
+  initializeSheets(ss);
+  return fetchData(ss);
+}
+
+function doPost(e) {
+  const ss = getSS();
+  if (!ss) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Không thể mở Google Sheet." 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    const action = payload.action;
+    initializeSheets(ss);
+
+    if (action === 'updateProgram') {
+      return updateProgram(ss, payload.program, payload.targetGrades);
+    } else if (action === 'updateSubjects') {
+      return updateSubjects(ss, payload.subjects);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Hành động không hợp lệ." 
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      message: "Lỗi xử lý dữ liệu: " + error.message 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function initializeSheets(ss) {
+  const sheets = [
+    { name: "Cấu hình", headers: ["Grade", "Subject", "SubSubject"] },
+    { name: "PPCT Khối 6", headers: ["Subject", "SubSubject", "Period", "Content"] },
+    { name: "PPCT Khối 7", headers: ["Subject", "SubSubject", "Period", "Content"] },
+    { name: "PPCT Khối 8", headers: ["Subject", "SubSubject", "Period", "Content"] },
+    { name: "PPCT Khối 9", headers: ["Subject", "SubSubject", "Period", "Content"] }
+  ];
+
+  sheets.forEach(s => {
+    let sheet = ss.getSheetByName(s.name);
+    if (!sheet) {
+      sheet = ss.insertSheet(s.name);
+      sheet.getRange(1, 1, 1, s.headers.length).setValues([s.headers]).setFontWeight("bold").setBackground("#f3f3f3");
+    }
+  });
+}
+
+function fetchData(ss) {
+  const subjectsSheet = ss.getSheetByName("Cấu hình");
+  const subjects = subjectsSheet ? subjectsSheet.getDataRange().getValues().slice(1).map(row => ({
+    grade: row[0],
+    subject: row[1],
+    subSubject: row[2]
+  })) : [];
+
+  const program = {};
+  [6, 7, 8, 9].forEach(grade => {
+    const sheet = ss.getSheetByName("PPCT Khối " + grade);
+    if (sheet) {
+      const data = sheet.getDataRange().getValues().slice(1);
+      program[grade] = JSON.stringify(data.map(row => ({
+        subject: row[0],
+        subSubject: row[1],
+        period: row[2],
+        content: row[3]
+      })));
+    }
+  });
+
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    subjects: subjects,
+    program: program
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function updateSubjects(ss, subjects) {
+  let sheet = ss.getSheetByName("Cấu hình");
+  if (!sheet) {
+    sheet = ss.insertSheet("Cấu hình");
+    sheet.appendRow(["Grade", "Subject", "SubSubject"]);
+  }
+  sheet.clearContents();
+  sheet.appendRow(["Grade", "Subject", "SubSubject"]);
+  subjects.forEach(s => {
+    sheet.appendRow([s.grade, s.subject, s.subSubject]);
+  });
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function updateProgram(ss, program, targetGrades) {
+  targetGrades.forEach(grade => {
+    const sheetName = "PPCT Khối " + grade;
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(["Subject", "SubSubject", "Period", "Content"]);
+    }
+    sheet.clearContents();
+    sheet.appendRow(["Subject", "SubSubject", "Period", "Content"]);
+    const data = JSON.parse(program[grade] || "[]");
+    data.forEach(item => {
+      sheet.appendRow([item.subject, item.subSubject, item.period, item.content]);
+    });
+  });
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+`;
 
 const numberToVietnameseWords = (num: number): string => {
   if (num === 0) return "Không đồng";
@@ -394,28 +657,28 @@ const Dashboard = ({
         <ModuleCard 
           title="Cấu hình HKD"
           desc="Thiết lập thông tin cơ sở, cấu hình hệ thống và quản lý các tham số vận hành cốt lõi."
-          image="https://picsum.photos/seed/office/800/600"
+          image="https://images.unsplash.com/photo-1454165833767-027ffea9e778?auto=format&fit=crop&w=800&q=80"
           onClick={() => setActiveTab('config_hkd')}
           color="indigo"
         />
         <ModuleCard 
           title="Quản lý học sinh"
           desc="Hệ thống lưu trữ hồ sơ, theo dõi chuyên cần và đánh giá tiến độ học tập của từng học sinh."
-          image="https://picsum.photos/seed/classroom/800/600"
+          image="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80"
           onClick={() => setActiveTab('students')}
           color="blue"
         />
         <ModuleCard 
           title="Chương trình dạy"
           desc="Xây dựng kế hoạch giảng dạy, quản lý phân phối chương trình và lịch báo giảng chi tiết."
-          image="https://picsum.photos/seed/library/800/600"
+          image="https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80"
           onClick={() => setActiveTab('program')}
           color="purple"
         />
         <ModuleCard 
           title="Quản lý tài chính"
           desc="Công cụ quản lý học phí, kiểm soát thu chi và báo cáo kết quả kinh doanh định kỳ."
-          image="https://picsum.photos/seed/business/800/600"
+          image="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=800&q=80"
           onClick={() => setActiveTab('finance')}
           color="emerald"
         />
@@ -423,7 +686,7 @@ const Dashboard = ({
           <ModuleCard 
             title="Quản lý tài khoản"
             desc="Cấu hình tài khoản người dùng, phân quyền, thời hạn sử dụng và giới hạn số máy truy cập."
-            image="https://picsum.photos/seed/security/800/600"
+            image="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=800&q=80"
             onClick={() => setActiveTab('accounts')}
             color="rose"
           />
@@ -694,7 +957,7 @@ export default function App() {
     address: '',
     owner: '',
     taxId: '',
-    scriptUrl: ''
+    scriptUrl: 'https://script.google.com/macros/s/AKfycbwdXqPI3viUroHevEJ5CzLk4dh3QfwstmJkB1PQA7alN-DbCSIdAPyXYSPhSd1Bf4ksmQ/exec'
   });
 
   const [subjects, setSubjects] = useState(FIXED_SUBJECTS);
@@ -1934,22 +2197,55 @@ export default function App() {
   };
 
   const saveConfig = () => {
-    localStorage.setItem('hkd_config', JSON.stringify(hkdConfig));
-    localStorage.setItem('subjects_config', JSON.stringify(subjects));
+    const configKey = currentUser ? `hkd_config_${currentUser.id}` : 'hkd_config';
+    const subjectsKey = currentUser ? `subjects_config_${currentUser.id}` : 'subjects_config';
+    localStorage.setItem(configKey, JSON.stringify(hkdConfig));
+    localStorage.setItem(subjectsKey, JSON.stringify(subjects));
     alert('Đã lưu cấu hình thành công!');
   };
 
-  const loadConfig = () => {
-    const savedHKD = localStorage.getItem('hkd_config');
-    const savedSubjects = localStorage.getItem('subjects_config');
+  const loadConfig = (user?: UserAccount | null, isUserAdmin?: boolean) => {
+    const activeUser = user !== undefined ? user : currentUser;
+    const activeIsAdmin = isUserAdmin !== undefined ? isUserAdmin : isAdmin;
+    const configKey = activeUser ? `hkd_config_${activeUser.id}` : 'hkd_config';
+    const subjectsKey = activeUser ? `subjects_config_${activeUser.id}` : 'subjects_config';
+    
+    const savedHKD = localStorage.getItem(configKey);
+    const savedSubjects = localStorage.getItem(subjectsKey);
+    
     if (savedHKD) {
       const config = JSON.parse(savedHKD);
       if (!config.scriptUrl) {
         config.scriptUrl = 'https://script.google.com/macros/s/AKfycbwdXqPI3viUroHevEJ5CzLk4dh3QfwstmJkB1PQA7alN-DbCSIdAPyXYSPhSd1Bf4ksmQ/exec';
       }
       setHkdConfig(config);
+    } else if (activeUser && !activeIsAdmin) {
+      // For new users, reset to default or empty
+      setHkdConfig({
+        name: '',
+        address: '',
+        owner: '',
+        taxId: '',
+        scriptUrl: ''
+      });
+    } else {
+      // Fallback to global config for admin or if not logged in
+      const globalHKD = localStorage.getItem('hkd_config');
+      if (globalHKD) {
+        setHkdConfig(JSON.parse(globalHKD));
+      }
     }
-    if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
+    
+    if (savedSubjects) {
+      setSubjects(JSON.parse(savedSubjects));
+    } else {
+      const globalSubjects = localStorage.getItem('subjects_config');
+      if (globalSubjects) {
+        setSubjects(JSON.parse(globalSubjects));
+      } else {
+        setSubjects(FIXED_SUBJECTS);
+      }
+    }
   };
 
   const addSubjectRow = () => {
@@ -2382,6 +2678,41 @@ export default function App() {
     localStorage.setItem('user_accounts', JSON.stringify(userAccounts));
   }, [scheduleData, journalData, students, financeStudents, scheduleMeta, journalMeta, teachingPrograms, userAccounts]);
 
+  const isExpired = (expiry: string | undefined) => {
+    if (!expiry || expiry.trim() === '') return false;
+    try {
+      let expiryDate: Date;
+      const expiryStr = expiry.trim();
+      
+      // Handle DD/MM/YYYY or DD-MM-YYYY
+      if (expiryStr.includes('/') || (expiryStr.includes('-') && expiryStr.split('-')[0].length <= 2)) {
+        const separator = expiryStr.includes('/') ? '/' : '-';
+        const parts = expiryStr.split(separator);
+        if (parts.length === 3) {
+          // Assume DD/MM/YYYY
+          expiryDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          expiryDate = new Date(expiryStr);
+        }
+      } else {
+        expiryDate = new Date(expiryStr);
+      }
+
+      if (isNaN(expiryDate.getTime())) return false;
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Normalize expiryDate to start of day local time for consistent comparison
+      const expiryLocal = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate());
+      expiryLocal.setHours(0, 0, 0, 0);
+      
+      return today > expiryLocal;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
@@ -2413,11 +2744,54 @@ export default function App() {
     }
 
     // 2. Check synced accounts
-    const user = userAccounts.find(u => {
+    let user = userAccounts.find(u => {
       const uName = String(u.username || '').trim().toLowerCase();
       const uPass = String(u.password || '').trim();
       return uName === username.toLowerCase() && uPass === password;
     });
+
+    // 2.1 Fallback: Try to sync from Google Sheets if not found locally
+    if (!user && hkdConfig.scriptUrl) {
+      try {
+        const response = await fetch(hkdConfig.scriptUrl);
+        const data = await response.json();
+        if (data.accounts && Array.isArray(data.accounts)) {
+          const syncedAccounts = data.accounts.map((acc: any, idx: number) => {
+            const existing = userAccounts.find(u => 
+              String(u.username).trim().toLowerCase() === String(acc.username).trim().toLowerCase()
+            );
+            return {
+              ...acc,
+              id: acc.id || existing?.id || `acc_${idx}_${Date.now()}`,
+              username: String(acc.username || '').trim(),
+              password: String(acc.password || '').trim(),
+              role: acc.role || 'Giáo viên',
+              expiry: acc.expiry || '',
+              maxDevices: parseInt(acc.maxDevices) || 1,
+              registeredDevices: acc.registeredDevices || existing?.registeredDevices || []
+            };
+          });
+          
+          const localOnly = userAccounts.filter(local => 
+            !syncedAccounts.some(synced => 
+              synced.username.toLowerCase() === local.username.toLowerCase()
+            )
+          );
+          
+          const finalAccounts = [...syncedAccounts, ...localOnly];
+          setUserAccounts(finalAccounts);
+          localStorage.setItem('user_accounts', JSON.stringify(finalAccounts));
+          
+          user = finalAccounts.find(u => {
+            const uName = String(u.username || '').trim().toLowerCase();
+            const uPass = String(u.password || '').trim();
+            return uName === username.toLowerCase() && uPass === password;
+          });
+        }
+      } catch (error) {
+        console.error('Login sync error:', error);
+      }
+    }
 
     if (!user) {
       setLoginError('Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!');
@@ -2425,46 +2799,57 @@ export default function App() {
     }
 
     // 3. Check expiry
-    if (user.expiry && user.expiry.trim() !== '') {
-      try {
-        const expiryDate = new Date(user.expiry);
-        if (!isNaN(expiryDate.getTime())) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          if (today > expiryDate) {
-            setLoginError('Tài khoản của bạn đã hết thời hạn sử dụng. Vui lòng liên hệ Admin để gia hạn!');
-            return;
-          }
-        }
-      } catch (e) {
-        console.error('Expiry check error:', e);
-      }
+    if (isExpired(user.expiry)) {
+      setLoginError('Tài khoản của bạn đã hết thời hạn sử dụng. Vui lòng liên hệ Admin để gia hạn!');
+      return;
     }
 
-    // 4. Check device limit
+    // 4. Check device limit (skip for admin)
     const maxAllowed = parseInt(String(user.maxDevices)) || 1;
     const registeredDevices = user.registeredDevices || [];
-    if (!registeredDevices.includes(deviceId) && registeredDevices.length >= maxAllowed) {
+    const isUserAdmin = String(user.role || '').trim() === 'Quản trị viên';
+
+    if (!isUserAdmin && !registeredDevices.includes(deviceId) && registeredDevices.length >= maxAllowed) {
       setLoginError(`Tài khoản đã đạt giới hạn số máy truy cập (${maxAllowed}). Vui lòng liên hệ Admin để hỗ trợ!`);
       return;
     }
 
     // Register device if not already registered
     if (!registeredDevices.includes(deviceId)) {
-      const updatedAccounts = userAccounts.map(u => {
-        if (u.id === user.id) {
-          return { ...u, registeredDevices: [...registeredDevices, deviceId] };
+      const updatedUser = { ...user, registeredDevices: [...registeredDevices, deviceId] };
+      
+      // Use the latest accounts list (either from state or from the sync we just did)
+      const currentAccounts = userAccounts.length > 0 ? userAccounts : [];
+      const updatedAccounts = currentAccounts.map(u => {
+        if (u.id === user.id || u.username.toLowerCase() === user.username.toLowerCase()) {
+          return updatedUser;
         }
         return u;
       });
+      
+      // If user wasn't in currentAccounts (e.g. just synced), add them
+      if (!updatedAccounts.some(u => u.username.toLowerCase() === user.username.toLowerCase())) {
+        updatedAccounts.push(updatedUser);
+      }
+
       setUserAccounts(updatedAccounts);
       localStorage.setItem('user_accounts', JSON.stringify(updatedAccounts));
+      
+      // Persist to Google Sheets
+      if (hkdConfig.scriptUrl) {
+        saveAccountsToGoogleSheets(updatedAccounts);
+      }
+      
+      // Use the updated user for the session
+      user = updatedUser;
     }
 
     setCurrentUser(user);
-    setIsAdmin(String(user.role || '').trim() === 'Quản trị viên');
+    setIsAdmin(isUserAdmin);
     setIsLoggedIn(true);
     setActiveTab('dashboard');
+    loadConfig(user, isUserAdmin);
+    alert(`Chào mừng ${user.username} quay trở lại!`);
   };
 
   if (!isLoggedIn) {
@@ -2520,6 +2905,33 @@ export default function App() {
               <LogIn size={28} />
               Đăng nhập hệ thống
             </button>
+            <button 
+              type="button"
+              onClick={fetchKHDHData}
+              className="mt-2 text-indigo-600 font-bold text-lg hover:underline flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={20} />
+              Đồng bộ tài khoản từ hệ thống
+            </button>
+
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <button 
+                type="button"
+                onClick={() => {
+                  const url = prompt('Nhập Google Script URL của bạn:', hkdConfig.scriptUrl);
+                  if (url !== null) {
+                    const newConfig = { ...hkdConfig, scriptUrl: url };
+                    setHkdConfig(newConfig);
+                    localStorage.setItem('hkd_config', JSON.stringify(newConfig));
+                    alert('Đã cập nhật Script URL!');
+                  }
+                }}
+                className="text-slate-400 hover:text-indigo-600 text-sm font-bold flex items-center justify-center gap-2 transition-colors w-full"
+              >
+                <Settings size={16} />
+                Cấu hình kết nối hệ thống
+              </button>
+            </div>
           </form>
         </motion.div>
       </div>
@@ -2692,16 +3104,16 @@ export default function App() {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => isAdmin && setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." />
-                    <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => isAdmin && setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." />
+                    <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." />
+                    <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputGroup label="Mã số thuế" value={hkdConfig.taxId} onChange={v => isAdmin && setHkdConfig({...hkdConfig, taxId: v})} placeholder="Nhập mã số thuế..." />
-                    <InputGroup label="Google Script URL" value={isAdmin ? (hkdConfig.scriptUrl || '') : '********'} onChange={v => isAdmin && setHkdConfig({...hkdConfig, scriptUrl: v})} placeholder="https://script.google.com/macros/s/.../exec" />
+                    <InputGroup label="Mã số thuế" value={hkdConfig.taxId} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, taxId: v})} placeholder="Nhập mã số thuế..." />
+                    <InputGroup label="Google Script URL" value={(isAdmin || currentUser) ? (hkdConfig.scriptUrl || '') : '********'} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, scriptUrl: v})} placeholder="https://script.google.com/macros/s/.../exec" />
                   </div>
-                  <InputGroup label="Địa chỉ" value={hkdConfig.address} onChange={v => isAdmin && setHkdConfig({...hkdConfig, address: v})} placeholder="Địa chỉ chi tiết..." />
-                  {isAdmin && (
-                    <button onClick={saveConfig} className="mt-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 w-fit">
+                  <InputGroup label="Địa chỉ" value={hkdConfig.address} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, address: v})} placeholder="Địa chỉ chi tiết..." />
+                  {(isAdmin || currentUser) && (
+                    <button onClick={saveConfig} className="mt-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 w-fit shadow-md">
                       <Save size={20} />
                       Lưu cấu hình
                     </button>
@@ -2714,18 +3126,17 @@ export default function App() {
                           <BookOpen size={20} /> Hướng dẫn kết nối Google Sheets
                         </h4>
                         <ul className="text-sm text-indigo-800 space-y-3 list-disc pl-5">
-                          <li>Mở tệp Google Sheets của bạn.</li>
-                          <li>Chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
-                          <li>Dán mã <code>code.gs</code> phiên bản hỗ trợ 2 chiều vào trình soạn thảo.</li>
+                          <li>Mở tệp Google Sheets mẫu và <b>Tạo bản sao</b>.</li>
+                          <li>Trong bản sao mới, chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
+                          <li>Dán mã Script tương ứng bên dưới vào trình soạn thảo.</li>
                           <li>Nhấn <b>Triển khai</b> &gt; <b>Triển khai mới</b>.</li>
                           <li>Chọn loại là <b>Ứng dụng web</b>, thiết lập "Người có quyền truy cập" là <b>Bất kỳ ai</b>.</li>
                           <li>Sao chép <b>URL ứng dụng web</b> và dán vào ô "Google Script URL" ở trên.</li>
-                          <li><b>Lưu ý:</b> Hệ thống hiện hỗ trợ đồng bộ 2 chiều. Bạn có thể sửa trên Sheets rồi nhấn "Đồng bộ" trên App, hoặc sửa trên App rồi nhấn "Lưu lên Sheet".</li>
                         </ul>
                         
                         <div className="mt-6 flex flex-wrap gap-4">
                           <a 
-                            href="https://docs.google.com/spreadsheets/d/1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ/edit" 
+                            href="https://docs.google.com/spreadsheets/d/1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ/copy" 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-sm"
@@ -2733,27 +3144,36 @@ export default function App() {
                             <ExternalLink size={18} />
                             Mở Google Sheet mẫu
                           </a>
+                          <a 
+                            href="https://script.google.com/home" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-amber-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-700 transition-all shadow-sm"
+                          >
+                            <ExternalLink size={18} />
+                            Mở Apps Script Editor
+                          </a>
                           <button 
                             onClick={() => {
-                              navigator.clipboard.writeText(GOOGLE_SCRIPT_CODE);
+                              navigator.clipboard.writeText(isAdmin ? GOOGLE_SCRIPT_CODE : USER_GOOGLE_SCRIPT_CODE);
                               alert('Đã sao chép mã Google Script vào bộ nhớ tạm!');
                             }}
                             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm"
                           >
                             <Copy size={18} />
-                            Sao chép mã Script
+                            Sao chép mã Script ({isAdmin ? 'Admin' : 'User'})
                           </button>
                         </div>
                       </div>
                       
                       <div className="flex-1 bg-slate-900 rounded-xl p-4 border border-slate-800 overflow-hidden flex flex-col">
                         <div className="flex justify-between items-center mb-2 px-2">
-                          <span className="text-xs font-mono text-slate-400">code.gs</span>
+                          <span className="text-xs font-mono text-slate-400">code.gs ({isAdmin ? 'Admin' : 'User'})</span>
                           <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Google Apps Script</span>
                         </div>
                         <div className="relative flex-1 overflow-auto max-h-[300px] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                           <pre className="text-[11px] font-mono text-indigo-300 leading-relaxed p-2">
-                            {GOOGLE_SCRIPT_CODE}
+                            {isAdmin ? GOOGLE_SCRIPT_CODE : USER_GOOGLE_SCRIPT_CODE}
                           </pre>
                         </div>
                       </div>
@@ -4125,7 +4545,7 @@ export default function App() {
                               </td>
                               <td className="p-4 text-sm text-slate-500">
                                 {acc.expiry ? (
-                                  <span className={new Date(acc.expiry) < new Date() ? 'text-rose-500 font-bold' : ''}>
+                                  <span className={isExpired(acc.expiry) ? 'text-rose-500 font-bold' : ''}>
                                     {acc.expiry}
                                   </span>
                                 ) : 'Vĩnh viễn'}
