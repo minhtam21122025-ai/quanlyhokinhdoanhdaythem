@@ -55,7 +55,10 @@ import {
   Twitter,
   Youtube,
   Copy,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet,
+  ChevronRight,
+  Code2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -435,12 +438,22 @@ function doPost(e) {
 }
 
 function initializeSheets(ss) {
+  // TỰ ĐỘNG XÓA sheet "Tài khoản đăng nhập" nếu tồn tại (Bảo mật khi người dùng copy từ bản của Admin)
+  const adminSheet = ss.getSheetByName("Tài khoản đăng nhập");
+  if (adminSheet) {
+    try {
+      ss.deleteSheet(adminSheet);
+    } catch (e) {
+      console.warn("Không thể xóa sheet tài khoản: " + e.message);
+    }
+  }
+
   const sheets = [
     { name: "Cấu hình", headers: ["Grade", "Subject", "SubSubject"] },
-    { name: "PPCT Khối 6", headers: ["Subject", "SubSubject", "Period", "Content"] },
-    { name: "PPCT Khối 7", headers: ["Subject", "SubSubject", "Period", "Content"] },
-    { name: "PPCT Khối 8", headers: ["Subject", "SubSubject", "Period", "Content"] },
-    { name: "PPCT Khối 9", headers: ["Subject", "SubSubject", "Period", "Content"] }
+    { name: "PPCT Khối 6", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
+    { name: "PPCT Khối 7", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
+    { name: "PPCT Khối 8", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
+    { name: "PPCT Khối 9", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] }
   ];
 
   sheets.forEach(s => {
@@ -453,32 +466,43 @@ function initializeSheets(ss) {
 }
 
 function fetchData(ss) {
-  const subjectsSheet = ss.getSheetByName("Cấu hình");
-  const subjects = subjectsSheet ? subjectsSheet.getDataRange().getValues().slice(1).map(row => ({
-    grade: row[0],
-    subject: row[1],
-    subSubject: row[2]
-  })) : [];
-
-  const program = {};
-  [6, 7, 8, 9].forEach(grade => {
-    const sheet = ss.getSheetByName("PPCT Khối " + grade);
-    if (sheet) {
-      const data = sheet.getDataRange().getValues().slice(1);
-      program[grade] = JSON.stringify(data.map(row => ({
-        subject: row[0],
-        subSubject: row[1],
-        period: row[2],
-        content: row[3]
-      })));
+  const data = {
+    subjects: getSheetData(ss, "Cấu hình"),
+    program: {
+      "6": getSheetData(ss, "PPCT Khối 6"),
+      "7": getSheetData(ss, "PPCT Khối 7"),
+      "8": getSheetData(ss, "PPCT Khối 8"),
+      "9": getSheetData(ss, "PPCT Khối 9")
     }
-  });
+  };
 
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
-    subjects: subjects,
-    program: program
+    subjects: data.subjects,
+    program: data.program,
+    accounts: [] 
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheetData(ss, sheetName) {
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+  
+  const headers = values[0];
+  const rows = values.slice(1);
+  
+  return rows.map(row => {
+    const obj = {};
+    headers.forEach((header, i) => {
+      let key = header.toLowerCase();
+      if (key === 'subsubject') key = 'subSubject';
+      obj[key] = row[i];
+    });
+    return obj;
+  });
 }
 
 function updateSubjects(ss, subjects) {
@@ -501,13 +525,26 @@ function updateProgram(ss, program, targetGrades) {
     let sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       sheet = ss.insertSheet(sheetName);
-      sheet.appendRow(["Subject", "SubSubject", "Period", "Content"]);
+      sheet.appendRow(["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"]);
     }
+    
+    const oldData = sheet.getDataRange().getValues();
+    const headers = oldData[0];
+    
     sheet.clearContents();
-    sheet.appendRow(["Subject", "SubSubject", "Period", "Content"]);
-    const data = JSON.parse(program[grade] || "[]");
-    data.forEach(item => {
-      sheet.appendRow([item.subject, item.subSubject, item.period, item.content]);
+    sheet.appendRow(headers);
+    
+    const newData = program[grade] || [];
+    newData.forEach(item => {
+      const row = headers.map(h => {
+        const key = h.toLowerCase();
+        if (key === 'subject') return item.subject || "";
+        if (key === 'subsubject') return item.subSubject || "";
+        if (key === 'period') return item.period || "";
+        if (key === 'content') return item.content || "";
+        return ""; 
+      });
+      sheet.appendRow(row);
     });
   });
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
@@ -722,7 +759,7 @@ const Dashboard = ({
         <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 border-slate-100 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h3 className="text-2xl font-bold text-slate-900 font-display tracking-tight">Tỉ lệ duy trì</h3>
+              <h3 className="text-2xl font-bold text-slate-900 font-sans tracking-tight">Tỉ lệ duy trì</h3>
               <p className="text-slate-500 text-sm font-bold mt-1">Biến động học sinh theo tháng</p>
             </div>
             <div className="p-3 bg-slate-50 rounded-xl ring-1 ring-slate-100">
@@ -766,14 +803,14 @@ const Dashboard = ({
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-0.5">Chuyên cần</h4>
-              <p className="text-xl font-bold text-slate-900 font-display">94.2%</p>
+              <p className="text-xl font-bold text-slate-900 font-sans">94.2%</p>
             </div>
           </div>
 
           <div className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Học phí tháng</h4>
             <div className="flex items-end justify-between mb-2">
-              <p className="text-xl font-bold text-slate-900 font-display">75%</p>
+              <p className="text-xl font-bold text-slate-900 font-sans">75%</p>
               <p className="text-xs font-bold text-slate-500">45/60</p>
             </div>
             <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -869,7 +906,7 @@ const Reports = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <h3 className="text-2xl font-bold text-slate-800 mb-8 font-display">Tóm tắt tài chính tháng {financialConfig.month}</h3>
+          <h3 className="text-2xl font-bold text-slate-800 mb-8 font-sans">Tóm tắt tài chính tháng {financialConfig.month}</h3>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data}>
@@ -907,7 +944,7 @@ const Reports = ({
 
         {/* Student Distribution */}
         <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <h3 className="text-2xl font-bold text-slate-800 mb-8 font-display">Phân bổ học sinh</h3>
+          <h3 className="text-2xl font-bold text-slate-800 mb-8 font-sans">Phân bổ học sinh</h3>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>
@@ -982,12 +1019,24 @@ export default function App() {
       if (data.program) {
         const mappedKhdhData: Record<string, string> = {};
         [6, 7, 8, 9].forEach(grade => {
-          const gradeProgram = data.program[grade] || [];
-          gradeProgram.forEach((item: any) => {
-            // Key format: grade-subject-subSubject-period
-            const key = `${grade}-${item.subject}-${item.subSubject || ''}-${item.period}`;
-            mappedKhdhData[key] = item.content || '';
-          });
+          let gradeProgram = data.program[grade] || [];
+          
+          // Fix for potential JSON string format from older script versions
+          if (typeof gradeProgram === 'string') {
+            try {
+              gradeProgram = JSON.parse(gradeProgram);
+            } catch (e) {
+              gradeProgram = [];
+            }
+          }
+          
+          if (Array.isArray(gradeProgram)) {
+            gradeProgram.forEach((item: any) => {
+              // Key format: grade-subject-subSubject-period
+              const key = `${grade}-${item.subject}-${item.subSubject || ''}-${item.period}`;
+              mappedKhdhData[key] = item.content || '';
+            });
+          }
         });
         
         setKhdhData(mappedKhdhData); 
@@ -3932,8 +3981,47 @@ export default function App() {
               
               {financeSubTab === 'config' && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+                  {/* Admin Tools Links */}
+                  <div className="bg-indigo-50 p-8 rounded-[2.5rem] border-2 border-indigo-100 shadow-sm">
+                    <h4 className="text-xl font-bold text-indigo-900 mb-6 flex items-center gap-3">
+                      <ExternalLink size={24} className="text-indigo-600" /> Công cụ quản trị hệ thống (Master)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <a 
+                        href="https://docs.google.com/spreadsheets/d/1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ/edit?gid=0#gid=0" 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="flex items-center gap-4 p-6 bg-white rounded-3xl border border-indigo-100 hover:shadow-xl transition-all group"
+                      >
+                        <div className="p-4 bg-emerald-100 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform shadow-sm">
+                          <FileSpreadsheet size={32} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-lg">Mở Google Sheet Master</p>
+                          <p className="text-sm text-slate-500 font-medium">Quản lý cấu hình & PPCT gốc</p>
+                        </div>
+                        <ChevronRight className="ml-auto text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                      </a>
+                      <a 
+                        href="https://script.google.com/macros/s/AKfycbxIwNihW13uszAAhz6EC1aUt7WwHMp5OcigEdI8NqeBRqfdoGPW-jUsVXlje5-HDreEhw/exec" 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="flex items-center gap-4 p-6 bg-white rounded-3xl border border-indigo-100 hover:shadow-xl transition-all group"
+                      >
+                        <div className="p-4 bg-amber-100 rounded-2xl text-amber-600 group-hover:scale-110 transition-transform shadow-sm">
+                          <Code2 size={32} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-lg">Mở Google Script Admin</p>
+                          <p className="text-sm text-slate-500 font-medium">Quản lý API & Đồng bộ tài khoản</p>
+                        </div>
+                        <ChevronRight className="ml-auto text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                      </a>
+                    </div>
+                  </div>
+
                   <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
-                    <h3 className="text-3xl font-bold text-slate-900 mb-10 font-display tracking-tight">Cấu hình tài chính</h3>
+                    <h3 className="text-3xl font-bold text-slate-900 mb-10 font-sans tracking-tight">Cấu hình tài chính</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                       <InputGroup 
                         label="Kỳ báo cáo" 
@@ -3990,7 +4078,7 @@ export default function App() {
 
                   {isFinanceConfigSaved && (
                     <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
-                      <h3 className="text-3xl font-bold text-slate-900 mb-10 font-display tracking-tight">Tải dữ liệu thu chi</h3>
+                      <h3 className="text-3xl font-bold text-slate-900 mb-10 font-sans tracking-tight">Tải dữ liệu thu chi</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
                         {/* Khu vực thu */}
