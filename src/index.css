@@ -19,15 +19,15 @@
 
 @layer components {
   .nav-link {
-    @apply flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200;
+    @apply flex items-center gap-2 px-5 py-3.5 rounded-xl text-lg font-bold transition-all duration-200;
   }
   
   .nav-link-active {
-    @apply bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100/50;
+    @apply bg-indigo-600 text-white shadow-lg shadow-indigo-200/50;
   }
   
   .nav-link-inactive {
-    @apply text-slate-700 hover:bg-slate-100 hover:text-slate-900;
+    @apply text-slate-800 hover:bg-slate-100 hover:text-slate-900;
   }
 
   .section-card {

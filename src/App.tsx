@@ -53,7 +53,9 @@ import {
   Facebook,
   Instagram,
   Twitter,
-  Youtube
+  Youtube,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -137,6 +139,117 @@ const SHIFT_OPTIONS = [
 ];
 
 const DAY_OPTIONS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
+
+const GOOGLE_SCRIPT_CODE = `/**
+ * Google Apps Script for connecting React App to Google Sheets
+ * This script handles initialization of sheets and provides a read-only endpoint.
+ */
+
+const SPREADSHEET_ID = "1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ";
+
+function doGet(e) {
+  // Check if e is defined (prevents error when running manually in Apps Script editor)
+  if (!e || !e.parameter) {
+    return ContentService.createTextOutput("Script is running correctly. Please access it via the Web App URL from the React application.").setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const action = e.parameter.action;
+
+  // Initialize sheets if they don't exist
+  initializeSheets(ss);
+
+  if (action === 'login') {
+    return handleLogin(ss, e.parameter.username, e.parameter.password);
+  }
+
+  // Default action: Fetch all data
+  return fetchData(ss);
+}
+
+function doPost(e) {
+  // Read-only mode: Disable saving from system to sheets
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: false, 
+    message: "Hệ thống đang ở chế độ CHỈ ĐỌC. Vui lòng chỉnh sửa trực tiếp trên Google Sheets." 
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function initializeSheets(ss) {
+  const sheets = [
+    { name: "Tài khoản đăng nhập", headers: ["ID", "Username", "Password", "Role", "Expiry", "MaxDevices"] },
+    { name: "Cấu hình", headers: ["Grade", "Subject", "SubSubject"] },
+    { name: "PPCT Khối 6", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
+    { name: "PPCT Khối 7", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
+    { name: "PPCT Khối 8", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
+    { name: "PPCT Khối 9", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] }
+  ];
+
+  sheets.forEach(s => {
+    let sheet = ss.getSheetByName(s.name);
+    if (!sheet) {
+      sheet = ss.insertSheet(s.name);
+      sheet.getRange(1, 1, 1, s.headers.length).setValues([s.headers]).setFontWeight("bold").setBackground("#f3f3f3");
+      
+      // Add a default admin account if it's the account sheet
+      if (s.name === "Tài khoản đăng nhập") {
+        sheet.appendRow(["admin-01", "admin", "123456", "Quản trị viên", "", "999"]);
+      }
+    }
+  });
+}
+
+function fetchData(ss) {
+  const data = {
+    accounts: getSheetData(ss, "Tài khoản đăng nhập"),
+    subjects: getSheetData(ss, "Cấu hình"),
+    program: {
+      "6": getSheetData(ss, "PPCT Khối 6"),
+      "7": getSheetData(ss, "PPCT Khối 7"),
+      "8": getSheetData(ss, "PPCT Khối 8"),
+      "9": getSheetData(ss, "PPCT Khối 9")
+    }
+  };
+
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheetData(ss, sheetName) {
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+  
+  const headers = values[0];
+  const rows = values.slice(1);
+  
+  return rows.map(row => {
+    const obj = {};
+    headers.forEach((header, i) => {
+      // Map headers to keys used in the React app
+      let key = header.toLowerCase();
+      if (key === 'subsubject') key = 'subSubject';
+      if (key === 'parentname') key = 'parentName';
+      if (key === 'registrationdate') key = 'registrationDate';
+      if (key === 'maxdevices') key = 'maxDevices';
+      
+      obj[key] = row[i];
+    });
+    return obj;
+  });
+}
+
+function handleLogin(ss, username, password) {
+  const accounts = getSheetData(ss, "Tài khoản đăng nhập");
+  const user = accounts.find(u => String(u.username) === String(username) && String(u.password) === String(password));
+  
+  if (user) {
+    return ContentService.createTextOutput(JSON.stringify({ success: true, user: user })).setMimeType(ContentService.MimeType.JSON);
+  } else {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Sai tài khoản hoặc mật khẩu" })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
 
 const numberToVietnameseWords = (num: number): string => {
   if (num === 0) return "Không đồng";
@@ -242,7 +355,7 @@ const Dashboard = ({
             transition={{ delay: 0.2 }}
           >
             <div className="flex flex-wrap items-center gap-3 mb-4 sm:mb-6">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs sm:text-sm font-black uppercase tracking-wider">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs sm:text-sm font-bold uppercase tracking-wider">
                 <Sparkles size={16} /> Chào mừng Quý Thầy Cô đến với HOÀNG GIA !
               </span>
               {currentUser?.expiry && (
@@ -252,17 +365,17 @@ const Dashboard = ({
               )}
             </div>
             
-            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black mb-4 sm:mb-6 leading-tight tracking-tighter">
+            <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold mb-4 sm:mb-6 leading-tight tracking-tighter text-center">
               Hệ thống quản lý, vận hành <br className="hidden sm:block" />
-              cơ sở dạy thêm tối ưu
+              cơ sở dạy thêm
             </h1>
             
             <div className="bg-white/10 backdrop-blur-lg rounded-[1.25rem] p-5 sm:p-6 border border-white/20 shadow-inner">
-              <p className="text-sm sm:text-base lg:text-lg leading-relaxed opacity-95 font-bold mb-4">
+              <p className="text-sm sm:text-base lg:text-lg leading-relaxed opacity-95 font-medium mb-4">
                 Hệ thống được thiết kế dành riêng cho các thầy cô và trung tâm dạy thêm. Bao gồm các chương trình: 
-                <span className="text-blue-200 font-black mx-1 underline decoration-blue-500/30 underline-offset-4">Quản lý học sinh</span>, 
-                <span className="text-emerald-200 font-black mx-1 underline decoration-emerald-500/30 underline-offset-4">Quản lý chương trình dạy</span>, 
-                <span className="text-purple-200 font-black mx-1 underline decoration-purple-500/30 underline-offset-4">Quản lý tài chính</span>. 
+                <span className="text-blue-200 font-bold mx-1 underline decoration-blue-500/30 underline-offset-4">Quản lý học sinh</span>, 
+                <span className="text-emerald-200 font-bold mx-1 underline decoration-emerald-500/30 underline-offset-4">Quản lý chương trình dạy</span>, 
+                <span className="text-purple-200 font-bold mx-1 underline decoration-purple-500/30 underline-offset-4">Quản lý tài chính</span>. 
               </p>
               <p className="text-xs sm:text-sm opacity-90 italic font-medium">
                 Chúng tôi cung cấp các công cụ mạnh mẽ để quản lý học sinh, chương trình giảng dạy và tài chính, giúp Quý Thầy Cô tập trung hoàn toàn vào sứ mệnh truyền đạt tri thức.
@@ -281,28 +394,28 @@ const Dashboard = ({
         <ModuleCard 
           title="Cấu hình HKD"
           desc="Thiết lập thông tin cơ sở, cấu hình hệ thống và quản lý các tham số vận hành cốt lõi."
-          image="https://picsum.photos/seed/config/800/600"
+          image="https://picsum.photos/seed/office/800/600"
           onClick={() => setActiveTab('config_hkd')}
           color="indigo"
         />
         <ModuleCard 
           title="Quản lý học sinh"
           desc="Hệ thống lưu trữ hồ sơ, theo dõi chuyên cần và đánh giá tiến độ học tập của từng học sinh."
-          image="https://picsum.photos/seed/students/800/600"
+          image="https://picsum.photos/seed/classroom/800/600"
           onClick={() => setActiveTab('students')}
           color="blue"
         />
         <ModuleCard 
           title="Chương trình dạy"
           desc="Xây dựng kế hoạch giảng dạy, quản lý phân phối chương trình và lịch báo giảng chi tiết."
-          image="https://picsum.photos/seed/teaching/800/600"
+          image="https://picsum.photos/seed/library/800/600"
           onClick={() => setActiveTab('program')}
           color="purple"
         />
         <ModuleCard 
           title="Quản lý tài chính"
           desc="Công cụ quản lý học phí, kiểm soát thu chi và báo cáo kết quả kinh doanh định kỳ."
-          image="https://picsum.photos/seed/finance/800/600"
+          image="https://picsum.photos/seed/business/800/600"
           onClick={() => setActiveTab('finance')}
           color="emerald"
         />
@@ -310,7 +423,7 @@ const Dashboard = ({
           <ModuleCard 
             title="Quản lý tài khoản"
             desc="Cấu hình tài khoản người dùng, phân quyền, thời hạn sử dụng và giới hạn số máy truy cập."
-            image="https://picsum.photos/seed/accounts/800/600"
+            image="https://picsum.photos/seed/security/800/600"
             onClick={() => setActiveTab('accounts')}
             color="rose"
           />
@@ -331,11 +444,11 @@ const Dashboard = ({
               <div className="p-3 sm:p-4 bg-white rounded-[1rem] sm:rounded-[1.5rem] shadow-sm group-hover:shadow-md transition-all">
                 {React.cloneElement(stat.icon as React.ReactElement, { size: 24 })}
               </div>
-              <span className="text-[10px] sm:text-xs font-black text-emerald-600 bg-emerald-100 px-2 sm:px-3 py-1 rounded-full">{stat.trend}</span>
+              <span className="text-[10px] sm:text-xs font-bold text-emerald-600 bg-emerald-100 px-2 sm:px-3 py-1 rounded-full">{stat.trend}</span>
             </div>
             <div>
-              <p className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tighter mb-1 sm:mb-2">{stat.value}</p>
-              <p className="text-[10px] sm:text-sm font-black text-slate-500 uppercase tracking-widest">{stat.label}</p>
+              <p className="text-3xl sm:text-5xl font-bold text-slate-900 tracking-tighter mb-1 sm:mb-2">{stat.value}</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-slate-500 uppercase tracking-widest">{stat.label}</p>
             </div>
           </motion.div>
         ))}
@@ -346,7 +459,7 @@ const Dashboard = ({
         <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 border-slate-100 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h3 className="text-2xl font-black text-slate-900 font-display tracking-tight">Tỉ lệ duy trì</h3>
+              <h3 className="text-2xl font-bold text-slate-900 font-display tracking-tight">Tỉ lệ duy trì</h3>
               <p className="text-slate-500 text-sm font-bold mt-1">Biến động học sinh theo tháng</p>
             </div>
             <div className="p-3 bg-slate-50 rounded-xl ring-1 ring-slate-100">
@@ -389,16 +502,16 @@ const Dashboard = ({
               </ResponsiveContainer>
             </div>
             <div>
-              <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-0.5">Chuyên cần</h4>
-              <p className="text-xl font-black text-slate-900 font-display">94.2%</p>
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-0.5">Chuyên cần</h4>
+              <p className="text-xl font-bold text-slate-900 font-display">94.2%</p>
             </div>
           </div>
 
           <div className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
-            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Học phí tháng</h4>
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Học phí tháng</h4>
             <div className="flex items-end justify-between mb-2">
-              <p className="text-xl font-black text-slate-900 font-display">75%</p>
-              <p className="text-xs font-black text-slate-500">45/60</p>
+              <p className="text-xl font-bold text-slate-900 font-display">75%</p>
+              <p className="text-xs font-bold text-slate-500">45/60</p>
             </div>
             <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
               <motion.div 
@@ -443,7 +556,7 @@ const ModuleCard = ({ title, desc, image, onClick, color }: {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
       </div>
       <div className="p-6 sm:p-8 flex-1 flex flex-col">
-        <h3 className="text-xl sm:text-3xl font-black text-slate-900 mb-2 sm:mb-4 font-sans transition-all">{title}</h3>
+        <h3 className="text-xl sm:text-3xl font-bold text-slate-900 mb-2 sm:mb-4 font-sans transition-all">{title}</h3>
         <p className="text-xs sm:text-base text-slate-700 font-normal leading-relaxed mb-4 sm:mb-8 opacity-80 flex-1 transition-all line-clamp-2 sm:line-clamp-none">{desc}</p>
         <div className="flex items-center gap-2 sm:gap-4 text-sm sm:text-lg font-normal group-hover:font-bold text-indigo-600 group-hover:translate-x-3 transition-all">
           Truy cập ngay <ArrowRight size={16} />
@@ -455,14 +568,16 @@ const ModuleCard = ({ title, desc, image, onClick, color }: {
 
 const Reports = ({ 
   students, 
+  financeStudents,
   financialConfig, 
   expenditures 
 }: { 
   students: Student[]; 
+  financeStudents: Student[];
   financialConfig: any; 
   expenditures: any[];
 }) => {
-  const totalRevenue = students.reduce((sum, s) => sum + (s.fee ?? financialConfig.feePerSession), 0);
+  const totalRevenue = financeStudents.reduce((sum, s) => sum + (s.fee ?? financialConfig.feePerSession), 0);
   const totalExpenditure = expenditures.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - totalExpenditure;
 
@@ -491,7 +606,7 @@ const Reports = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <h3 className="text-2xl font-black text-slate-800 mb-8 font-display">Tóm tắt tài chính tháng {financialConfig.month}</h3>
+          <h3 className="text-2xl font-bold text-slate-800 mb-8 font-display">Tóm tắt tài chính tháng {financialConfig.month}</h3>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data}>
@@ -513,23 +628,23 @@ const Reports = ({
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
             <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
-              <p className="text-sm font-black text-indigo-500 uppercase tracking-wider mb-2">Tổng thu</p>
-              <p className="text-2xl font-black text-indigo-700">{totalRevenue.toLocaleString('vi-VN')}đ</p>
+              <p className="text-sm font-bold text-indigo-500 uppercase tracking-wider mb-2">Tổng thu</p>
+              <p className="text-2xl font-bold text-indigo-700">{totalRevenue.toLocaleString('vi-VN')}đ</p>
             </div>
             <div className="p-6 bg-rose-50 rounded-3xl border border-rose-100">
-              <p className="text-sm font-black text-rose-500 uppercase tracking-wider mb-2">Tổng chi</p>
-              <p className="text-2xl font-black text-rose-700">{totalExpenditure.toLocaleString('vi-VN')}đ</p>
+              <p className="text-sm font-bold text-rose-500 uppercase tracking-wider mb-2">Tổng chi</p>
+              <p className="text-2xl font-bold text-rose-700">{totalExpenditure.toLocaleString('vi-VN')}đ</p>
             </div>
             <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100">
-              <p className="text-sm font-black text-emerald-500 uppercase tracking-wider mb-2">Thực thu</p>
-              <p className="text-2xl font-black text-emerald-700">{netProfit.toLocaleString('vi-VN')}đ</p>
+              <p className="text-sm font-bold text-emerald-500 uppercase tracking-wider mb-2">Thực thu</p>
+              <p className="text-2xl font-bold text-emerald-700">{netProfit.toLocaleString('vi-VN')}đ</p>
             </div>
           </div>
         </div>
 
         {/* Student Distribution */}
         <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <h3 className="text-2xl font-black text-slate-800 mb-8 font-display">Phân bổ học sinh</h3>
+          <h3 className="text-2xl font-bold text-slate-800 mb-8 font-display">Phân bổ học sinh</h3>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>
@@ -559,7 +674,7 @@ const Reports = ({
                   <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: COLORS[i] }}></div>
                   <span className="text-lg font-bold text-slate-700">{grade.name}</span>
                 </div>
-                <span className="text-lg font-black text-slate-900">{grade.value} học sinh</span>
+                <span className="text-lg font-bold text-slate-900">{grade.value} học sinh</span>
               </div>
             ))}
           </div>
@@ -736,7 +851,7 @@ export default function App() {
   };
 
   const deleteFinanceData = () => {
-    setStudents([]);
+    setFinanceStudents([]);
     setExpenditures([]);
     setIsRevenueFileUploaded(false);
     setIsExpenditureFileUploaded(false);
@@ -1118,7 +1233,7 @@ export default function App() {
 
   const exportFinancialReports = async (mode: 'all' | 'revenue' | 'receipts' | 'vouchers' = 'all') => {
     // Filter out students with 0 fee to ensure consistency across all reports
-    const activeStudents = students.filter(s => (s.fee ?? financialConfig.feePerSession) > 0);
+    const activeStudents = financeStudents.filter(s => (s.fee ?? financialConfig.feePerSession) > 0);
     const sections = [];
 
     const formatDate = (dateStr: string) => {
@@ -1200,7 +1315,7 @@ export default function App() {
                 return new DocxTableRow({
                   children: [
                     new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: formatDate(financialConfig.receiptDate), size: 26 })] })] }),
-                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Thu tiền học ${financialConfig.period} - HS ${s.name} - Lớp ${cleanGrade}`, size: 26 })] })] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Thu tiền học ${financialConfig.period} - ${s.name} - L ${cleanGrade}`, size: 26 })] })] }),
                     new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: (s.fee || financialConfig.feePerSession).toLocaleString(), size: 26 })] })] }),
                   ],
                 });
@@ -1639,6 +1754,7 @@ export default function App() {
   const [scheduleData, setScheduleData] = useState<TableRow[]>([]);
   const [journalData, setJournalData] = useState<TableRow[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [financeStudents, setFinanceStudents] = useState<Student[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteGrade, setConfirmDeleteGrade] = useState<number | null>(null);
   const [confirmDeleteFinance, setConfirmDeleteFinance] = useState(false);
@@ -1685,8 +1801,8 @@ export default function App() {
     maxDevices: 1
   });
 
-  const activeStudentsCount = students.filter(s => (s.fee ?? financialConfig.feePerSession) > 0).length;
-  const revenue = students.reduce((sum, s) => sum + (s.fee ?? financialConfig.feePerSession), 0);
+  const activeStudentsCount = financeStudents.filter(s => (s.fee ?? financialConfig.feePerSession) > 0).length;
+  const revenue = financeStudents.reduce((sum, s) => sum + (s.fee ?? financialConfig.feePerSession), 0);
 
   const moveRow = (type: 'schedule' | 'journal', id: string, direction: 'up' | 'down') => {
     const setter = type === 'schedule' ? setScheduleData : setJournalData;
@@ -2237,6 +2353,7 @@ export default function App() {
     const savedSchedule = localStorage.getItem('schedule_data');
     const savedJournal = localStorage.getItem('journal_data');
     const savedStudents = localStorage.getItem('students_data');
+    const savedFinanceStudents = localStorage.getItem('finance_students_data');
     const savedScheduleMeta = localStorage.getItem('schedule_meta');
     const savedJournalMeta = localStorage.getItem('journal_meta');
     const savedPrograms = localStorage.getItem('teaching_programs');
@@ -2246,6 +2363,7 @@ export default function App() {
     if (savedSchedule) setScheduleData(JSON.parse(savedSchedule));
     if (savedJournal) setJournalData(JSON.parse(savedJournal));
     if (savedStudents) setStudents(JSON.parse(savedStudents));
+    if (savedFinanceStudents) setFinanceStudents(JSON.parse(savedFinanceStudents));
     if (savedScheduleMeta) setScheduleMeta(JSON.parse(savedScheduleMeta));
     if (savedJournalMeta) setJournalMeta(JSON.parse(savedJournalMeta));
     if (savedPrograms) setTeachingPrograms(JSON.parse(savedPrograms));
@@ -2257,11 +2375,12 @@ export default function App() {
     localStorage.setItem('schedule_data', JSON.stringify(scheduleData));
     localStorage.setItem('journal_data', JSON.stringify(journalData));
     localStorage.setItem('students_data', JSON.stringify(students));
+    localStorage.setItem('finance_students_data', JSON.stringify(financeStudents));
     localStorage.setItem('schedule_meta', JSON.stringify(scheduleMeta));
     localStorage.setItem('journal_meta', JSON.stringify(journalMeta));
     localStorage.setItem('teaching_programs', JSON.stringify(teachingPrograms));
     localStorage.setItem('user_accounts', JSON.stringify(userAccounts));
-  }, [scheduleData, journalData, students, scheduleMeta, journalMeta, teachingPrograms, userAccounts]);
+  }, [scheduleData, journalData, students, financeStudents, scheduleMeta, journalMeta, teachingPrograms, userAccounts]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2361,8 +2480,8 @@ export default function App() {
               <GraduationCap className="text-white w-16 h-16" />
             </div>
             <div className="text-center">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-tight uppercase">HOÀNG GIA</h1>
-              <p className="text-lg text-indigo-600 font-bold tracking-widest uppercase mt-2">Trao cơ hội nhận niềm tin</p>
+              <h1 className="text-4xl font-bold text-slate-900 tracking-tighter leading-tight uppercase">HOÀNG GIA</h1>
+              <p className="text-lg text-indigo-600 font-bold tracking-widest uppercase mt-2">Trao cơ hội - Nhận niềm tin</p>
             </div>
           </div>
 
@@ -2423,29 +2542,29 @@ export default function App() {
             <div className="bg-indigo-600 p-4 rounded-[1.25rem] shadow-2xl shadow-indigo-200 ring-4 ring-indigo-50">
               <GraduationCap className="text-white w-10 h-10" />
             </div>
-            <div className="flex flex-col leading-none hidden sm:flex">
-              <span className="font-black text-2xl text-slate-900 tracking-tighter uppercase">HOÀNG GIA</span>
-              <span className="text-[10px] font-bold text-indigo-600 tracking-[0.2em] uppercase mt-1">Trao cơ hội nhận niềm tin</span>
+            <div className="flex flex-col items-center leading-none hidden sm:flex">
+              <span className="font-bold text-3xl text-slate-900 tracking-tighter uppercase whitespace-nowrap">HOÀNG GIA</span>
+              <span className="text-[10px] font-bold text-indigo-600 tracking-[0.2em] uppercase mt-2 text-center">Trao cơ hội - Nhận niềm tin</span>
             </div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-4">
-            <button onClick={() => setActiveTab('dashboard')} className={`nav-link ${activeTab === 'dashboard' ? 'nav-link-active' : 'nav-link-inactive'} font-bold transition-all`}>
+            <button onClick={() => setActiveTab('dashboard')} className={`nav-link ${activeTab === 'dashboard' ? 'nav-link-active' : 'nav-link-inactive'}`}>
               <Home size={24} /> Trang chủ
             </button>
-            <button onClick={() => setActiveTab('config_hkd')} className={`nav-link ${activeTab === 'config_hkd' ? 'nav-link-active' : 'nav-link-inactive'} font-bold transition-all`}>
+            <button onClick={() => setActiveTab('config_hkd')} className={`nav-link ${activeTab === 'config_hkd' ? 'nav-link-active' : 'nav-link-inactive'}`}>
               <Settings size={24} /> Tùy chỉnh
             </button>
-            <button onClick={() => setActiveTab('program')} className={`nav-link ${activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config' ? 'nav-link-active' : 'nav-link-inactive'} font-bold transition-all`}>
+            <button onClick={() => setActiveTab('program')} className={`nav-link ${activeTab === 'program' || activeTab === 'schedule' || activeTab === 'journal' || activeTab === 'subject_config' ? 'nav-link-active' : 'nav-link-inactive'}`}>
               <ClipboardList size={24} /> Chương trình
             </button>
-            <button onClick={() => setActiveTab('finance')} className={`nav-link ${activeTab === 'finance' ? 'nav-link-active' : 'nav-link-inactive'} font-bold transition-all`}>
+            <button onClick={() => setActiveTab('finance')} className={`nav-link ${activeTab === 'finance' ? 'nav-link-active' : 'nav-link-inactive'}`}>
               <DollarSign size={24} /> Tài chính
             </button>
-            <button onClick={() => setActiveTab('students')} className={`nav-link ${activeTab === 'students' ? 'nav-link-active' : 'nav-link-inactive'} font-bold transition-all`}>
+            <button onClick={() => setActiveTab('students')} className={`nav-link ${activeTab === 'students' ? 'nav-link-active' : 'nav-link-inactive'}`}>
               <Users size={24} /> Học sinh
             </button>
-            <button onClick={() => setActiveTab('reports')} className={`nav-link ${activeTab === 'reports' ? 'nav-link-active' : 'nav-link-inactive'} font-bold transition-all`}>
+            <button onClick={() => setActiveTab('reports')} className={`nav-link ${activeTab === 'reports' ? 'nav-link-active' : 'nav-link-inactive'}`}>
               <BarChart3 size={24} /> Báo cáo
             </button>
           </nav>
@@ -2461,10 +2580,10 @@ export default function App() {
 
           <div className="flex items-center gap-6 group cursor-pointer relative">
             <div className="text-right hidden md:block">
-              <p className="text-xl font-black text-slate-900 leading-none">{currentUser?.username}</p>
-              <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mt-3">{currentUser?.role}</p>
+              <p className="text-xl font-bold text-slate-900 leading-none">{currentUser?.username}</p>
+              <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest mt-3">{currentUser?.role}</p>
             </div>
-            <div className="w-14 h-14 rounded-[1.25rem] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-2xl shadow-2xl shadow-indigo-200 ring-4 ring-white group-hover:scale-105 transition-transform">
+            <div className="w-14 h-14 rounded-[1.25rem] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl shadow-2xl shadow-indigo-200 ring-4 ring-white group-hover:scale-105 transition-transform">
               {currentUser?.username?.charAt(0).toUpperCase()}
             </div>
             <ChevronDown size={24} className="text-slate-400 group-hover:text-indigo-600 transition-colors hidden sm:block" />
@@ -2472,8 +2591,8 @@ export default function App() {
             {/* Dropdown */}
             <div className="absolute top-full right-0 mt-6 w-72 bg-white rounded-[2rem] shadow-2xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 py-6 z-[60] ring-1 ring-slate-200">
               <div className="px-8 py-4 border-b border-slate-50 mb-4 md:hidden">
-                <p className="text-xl font-black text-slate-900 leading-none">{currentUser?.username}</p>
-                <p className="text-sm font-black text-indigo-600 uppercase tracking-widest mt-3">{currentUser?.role}</p>
+                <p className="text-xl font-bold text-slate-900 leading-none">{currentUser?.username}</p>
+                <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest mt-3">{currentUser?.role}</p>
               </div>
               <button className="w-full px-8 py-5 text-left text-xl font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-5 transition-colors">
                 <User size={24} className="text-indigo-500" /> Thông tin cá nhân
@@ -2501,7 +2620,7 @@ export default function App() {
           <div className="flex items-center gap-4 mb-8">
             <button 
               onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 rounded-2xl font-black text-sm border border-slate-200 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 rounded-2xl font-bold text-sm border border-slate-200 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
             >
               <ArrowLeft size={18} />
               Quay về trang chủ
@@ -2512,25 +2631,25 @@ export default function App() {
           <div className="flex flex-wrap gap-4 mb-10 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 w-fit">
             <button 
               onClick={() => setActiveTab('program')}
-              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'program' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'program' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <BookOpen size={18} /> Chương trình dạy
             </button>
             <button 
               onClick={() => setActiveTab('subject_config')}
-              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'subject_config' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'subject_config' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <Settings size={18} /> Cấu hình môn học
             </button>
             <button 
               onClick={() => setActiveTab('schedule')}
-              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'schedule' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'schedule' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <Calendar size={18} /> Lịch báo giảng
             </button>
             <button 
               onClick={() => setActiveTab('journal')}
-              className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'journal' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+              className={`px-6 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'journal' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               <FileText size={18} /> Sổ đầu bài
             </button>
@@ -2550,6 +2669,7 @@ export default function App() {
           {activeTab === 'reports' && (
             <Reports 
               students={students}
+              financeStudents={financeStudents}
               financialConfig={financialConfig}
               expenditures={expenditures}
             />
@@ -2564,7 +2684,7 @@ export default function App() {
                     <div className="flex justify-end">
                       <button 
                         onClick={() => setActiveTab('accounts')}
-                        className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-rose-100 transition-all border border-rose-100"
+                        className="bg-rose-50 text-rose-600 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-rose-100 transition-all border border-rose-100"
                       >
                         <ShieldCheck size={20} />
                         Quản lý tài khoản người dùng
@@ -2588,18 +2708,56 @@ export default function App() {
                   )}
 
                   <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mt-6">
-                    <h4 className="text-lg font-bold text-indigo-900 mb-2 flex items-center gap-2">
-                      <BookOpen size={20} /> Hướng dẫn kết nối Google Sheets
-                    </h4>
-                    <ul className="text-sm text-indigo-800 space-y-2 list-disc pl-5">
-                      <li>Mở tệp Google Sheets của bạn.</li>
-                      <li>Chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
-                      <li>Dán mã <code>code.gs</code> phiên bản hỗ trợ 2 chiều vào trình soạn thảo.</li>
-                      <li>Nhấn <b>Triển khai</b> &gt; <b>Triển khai mới</b>.</li>
-                      <li>Chọn loại là <b>Ứng dụng web</b>, thiết lập "Người có quyền truy cập" là <b>Bất kỳ ai</b>.</li>
-                      <li>Sao chép <b>URL ứng dụng web</b> và dán vào ô "Google Script URL" ở trên.</li>
-                      <li><b>Lưu ý:</b> Hệ thống hiện hỗ trợ đồng bộ 2 chiều. Bạn có thể sửa trên Sheets rồi nhấn "Đồng bộ" trên App, hoặc sửa trên App rồi nhấn "Lưu lên Sheet".</li>
-                    </ul>
+                    <div className="flex flex-col lg:flex-row gap-8">
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                          <BookOpen size={20} /> Hướng dẫn kết nối Google Sheets
+                        </h4>
+                        <ul className="text-sm text-indigo-800 space-y-3 list-disc pl-5">
+                          <li>Mở tệp Google Sheets của bạn.</li>
+                          <li>Chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
+                          <li>Dán mã <code>code.gs</code> phiên bản hỗ trợ 2 chiều vào trình soạn thảo.</li>
+                          <li>Nhấn <b>Triển khai</b> &gt; <b>Triển khai mới</b>.</li>
+                          <li>Chọn loại là <b>Ứng dụng web</b>, thiết lập "Người có quyền truy cập" là <b>Bất kỳ ai</b>.</li>
+                          <li>Sao chép <b>URL ứng dụng web</b> và dán vào ô "Google Script URL" ở trên.</li>
+                          <li><b>Lưu ý:</b> Hệ thống hiện hỗ trợ đồng bộ 2 chiều. Bạn có thể sửa trên Sheets rồi nhấn "Đồng bộ" trên App, hoặc sửa trên App rồi nhấn "Lưu lên Sheet".</li>
+                        </ul>
+                        
+                        <div className="mt-6 flex flex-wrap gap-4">
+                          <a 
+                            href="https://docs.google.com/spreadsheets/d/1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ/edit" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-sm"
+                          >
+                            <ExternalLink size={18} />
+                            Mở Google Sheet mẫu
+                          </a>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(GOOGLE_SCRIPT_CODE);
+                              alert('Đã sao chép mã Google Script vào bộ nhớ tạm!');
+                            }}
+                            className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm"
+                          >
+                            <Copy size={18} />
+                            Sao chép mã Script
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 bg-slate-900 rounded-xl p-4 border border-slate-800 overflow-hidden flex flex-col">
+                        <div className="flex justify-between items-center mb-2 px-2">
+                          <span className="text-xs font-mono text-slate-400">code.gs</span>
+                          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Google Apps Script</span>
+                        </div>
+                        <div className="relative flex-1 overflow-auto max-h-[300px] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                          <pre className="text-[11px] font-mono text-indigo-300 leading-relaxed p-2">
+                            {GOOGLE_SCRIPT_CODE}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2636,7 +2794,7 @@ export default function App() {
                   </div>
                 <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-black border-b border-slate-200">
+                    <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
                       <tr>
                         <th className="p-4 w-24">Khối lớp</th>
                         <th className="p-4">Môn học</th>
@@ -2880,7 +3038,7 @@ export default function App() {
                           <BookOpen size={32} />
                         </div>
                         <div>
-                          <h3 className="text-3xl font-black text-slate-900">Chi tiết chương trình Khối {selectedGradeForProgram}</h3>
+                          <h3 className="text-3xl font-bold text-slate-900">Chi tiết chương trình Khối {selectedGradeForProgram}</h3>
                           <p className="text-lg text-slate-500 font-bold">Danh sách các tiết dạy đã cấu hình</p>
                         </div>
                       </div>
@@ -2909,11 +3067,11 @@ export default function App() {
                             return (
                               <div key={key} className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 flex flex-col md:flex-row md:items-center gap-4 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
                                 <div className="flex items-center gap-4 min-w-[200px]">
-                                  <span className="bg-white px-4 py-2 rounded-xl border-2 border-slate-200 text-indigo-600 font-black text-lg shadow-sm">
+                                  <span className="bg-white px-4 py-2 rounded-xl border-2 border-slate-200 text-indigo-600 font-bold text-lg shadow-sm">
                                     Tiết {parts[3]}
                                   </span>
                                   <div className="flex flex-col">
-                                    <span className="font-black text-slate-900 text-xl">{parts[1]}</span>
+                                    <span className="font-bold text-slate-900 text-xl">{parts[1]}</span>
                                     <span className="text-sm font-bold text-slate-500 italic">{parts[2]}</span>
                                   </div>
                                 </div>
@@ -2936,7 +3094,7 @@ export default function App() {
                     <div className="p-8 bg-slate-50 border-t-2 border-slate-100 flex justify-end">
                       <button 
                         onClick={() => setSelectedGradeForProgram(null)}
-                        className="bg-slate-900 text-white px-10 py-4 rounded-2xl text-xl font-black hover:bg-slate-800 transition-all shadow-xl"
+                        className="bg-slate-900 text-white px-10 py-4 rounded-2xl text-xl font-bold hover:bg-slate-800 transition-all shadow-xl"
                       >
                         Đóng
                       </button>
@@ -3010,14 +3168,14 @@ export default function App() {
                       value={activeTab === 'schedule' ? scheduleMeta.teacher : journalMeta.teacher} 
                       onChange={e => activeTab === 'schedule' ? setScheduleMeta({...scheduleMeta, teacher: e.target.value}) : setJournalMeta({...journalMeta, teacher: e.target.value})}
                       placeholder="Nhập tên giáo viên..."
-                      className="bg-transparent border-b border-slate-200 outline-none text-sm font-bold text-indigo-600 focus:border-indigo-500"
+                      className="bg-transparent border-b border-slate-200 outline-none text-sm font-semibold text-indigo-600 focus:border-indigo-500"
                     />
                   </div>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left min-w-[1200px] border-collapse">
-                    <thead className="bg-slate-50 text-slate-700 text-[10px] uppercase tracking-wider font-black border-y border-slate-200">
+                    <thead className="bg-slate-50 text-slate-700 text-[10px] uppercase tracking-wider font-bold border-y border-slate-200">
                       <tr>
                         <th className="p-4 w-32">Thứ ngày</th>
                         <th className="p-4 w-48">Ca học / Buổi</th>
@@ -3059,7 +3217,7 @@ export default function App() {
                             </select>
                           </td>
                           <td className="p-2">
-                            <select className="w-full p-2 bg-transparent outline-none text-sm font-bold text-slate-700" value={row.class} onChange={e => updateRow(activeTab as any, row.id, 'class', e.target.value)}>
+                            <select className="w-full p-2 bg-transparent outline-none text-sm font-semibold text-slate-700" value={row.class} onChange={e => updateRow(activeTab as any, row.id, 'class', e.target.value)}>
                               <option value="6">6</option>
                               <option value="7">7</option>
                               <option value="8">8</option>
@@ -3081,7 +3239,7 @@ export default function App() {
                             </select>
                           </td>
                           <td className="p-2">
-                            <input type="number" className="w-full p-2 bg-transparent outline-none text-sm text-center font-bold" value={row.period} onChange={e => updateRow(activeTab as any, row.id, 'period', e.target.value)} />
+                            <input type="number" className="w-full p-2 bg-transparent outline-none text-sm text-center font-semibold" value={row.period} onChange={e => updateRow(activeTab as any, row.id, 'period', e.target.value)} />
                           </td>
                           <td className="p-2">
                             <div className="p-2 text-sm text-slate-600 bg-slate-50 rounded-xl border border-slate-100 min-h-[42px] flex items-center">
@@ -3179,7 +3337,7 @@ export default function App() {
                         <Download className="text-slate-500 group-hover:text-indigo-600" size={28} />
                       </div>
                       <div>
-                        <p className="text-xl font-black text-slate-900 group-hover:text-indigo-700 mb-1">Tải xuống danh sách mẫu</p>
+                        <p className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 mb-1">Tải xuống danh sách mẫu</p>
                         <p className="text-sm text-slate-600 font-bold">File mẫu Excel</p>
                       </div>
                     </button>
@@ -3189,7 +3347,7 @@ export default function App() {
                         <Upload className="text-slate-500 group-hover:text-indigo-600" size={28} />
                       </div>
                       <div>
-                        <p className="text-xl font-black text-slate-900 group-hover:text-indigo-700 mb-1">
+                        <p className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 mb-1">
                           {isAnalyzing ? 'Đang phân tích...' : 'Tải lên danh sách'}
                         </p>
                         <p className="text-sm text-slate-600 font-bold">Nhập dữ liệu từ Excel</p>
@@ -3226,7 +3384,7 @@ export default function App() {
                         <FileDown className="text-slate-500 group-hover:text-indigo-600" size={28} />
                       </div>
                       <div>
-                        <p className="text-xl font-black text-slate-900 group-hover:text-indigo-700 mb-1">Xuất đơn hàng loạt</p>
+                        <p className="text-xl font-bold text-slate-900 group-hover:text-indigo-700 mb-1">Xuất đơn hàng loạt</p>
                         <p className="text-sm text-slate-600 font-bold">Tải toàn bộ đơn đăng ký</p>
                       </div>
                     </button>
@@ -3247,7 +3405,7 @@ export default function App() {
                         <Trash2 className={confirmDelete ? 'text-white' : 'text-slate-500 group-hover:text-rose-600'} size={28} />
                       </div>
                       <div>
-                        <p className={`text-xl font-black mb-1 ${confirmDelete ? 'text-white' : 'text-slate-900 group-hover:text-rose-700'}`}>
+                        <p className={`text-xl font-bold mb-1 ${confirmDelete ? 'text-white' : 'text-slate-900 group-hover:text-rose-700'}`}>
                           {confirmDelete ? 'Xác nhận xóa?' : 'Xóa danh sách'}
                         </p>
                         <p className={`text-sm font-bold ${confirmDelete ? 'text-white/80' : 'text-slate-600'}`}>
@@ -3259,17 +3417,17 @@ export default function App() {
 
                 <div className="bg-white rounded-[3rem] shadow-sm border-2 border-slate-100 overflow-hidden">
                   <div className="p-8 bg-slate-50 border-b-2 border-slate-100 flex items-center justify-between">
-                    <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
+                    <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-4">
                       <ClipboardList size={32} className="text-indigo-600" />
                       Danh sách học sinh
                     </h3>
-                    <span className="text-xl font-black text-indigo-600 bg-white px-6 py-2 rounded-2xl border-2 border-indigo-100 shadow-sm">
+                    <span className="text-xl font-bold text-indigo-600 bg-white px-6 py-2 rounded-2xl border-2 border-indigo-100 shadow-sm">
                       {students.length} học sinh
                     </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-slate-900 text-lg uppercase tracking-widest font-black border-b-2 border-slate-100">
+                        <thead className="bg-slate-50 text-slate-900 text-lg uppercase tracking-widest font-bold border-b-2 border-slate-100">
                           <tr>
                             <th className="p-8">Họ và tên</th>
                             <th className="p-8">Lớp</th>
@@ -3283,16 +3441,16 @@ export default function App() {
                         <tbody className="divide-y divide-slate-100">
                           {students.map((s) => (
                             <tr key={s.id} className="hover:bg-slate-50/50 transition-all group">
-                              <td className="p-8 font-black text-slate-900 text-2xl">{s.name}</td>
-                              <td className="p-8 text-slate-700 font-bold text-xl">{s.grade}</td>
-                              <td className="p-8 text-slate-700 font-bold text-xl">{s.school}</td>
-                              <td className="p-8 text-slate-700 font-bold text-xl">{s.parentName}</td>
-                              <td className="p-8 text-slate-700 font-bold text-xl">{s.phone}</td>
+                              <td className="p-8 font-bold text-slate-900 text-2xl">{s.name}</td>
+                              <td className="p-8 text-slate-700 font-medium text-xl">{s.grade}</td>
+                              <td className="p-8 text-slate-700 font-medium text-xl">{s.school}</td>
+                              <td className="p-8 text-slate-700 font-medium text-xl">{s.parentName}</td>
+                              <td className="p-8 text-slate-700 font-medium text-xl">{s.phone}</td>
                               <td className="p-8 text-slate-700 font-bold text-xl">{s.subjects}</td>
                               <td className="p-8 text-right">
                                 <button 
                                   onClick={() => exportRegistrationForm(s)}
-                                  className="text-indigo-600 hover:text-indigo-800 text-lg font-black flex items-center gap-3 ml-auto bg-indigo-50 px-6 py-3 rounded-[1.25rem] transition-all hover:shadow-md active:scale-95"
+                                  className="text-indigo-600 hover:text-indigo-800 text-lg font-bold flex items-center gap-3 ml-auto bg-indigo-50 px-6 py-3 rounded-[1.25rem] transition-all hover:shadow-md active:scale-95"
                                 >
                                   <FileDown size={24} />
                                   Xuất đơn
@@ -3323,28 +3481,28 @@ export default function App() {
                 <div className="flex items-center gap-3 bg-slate-100 p-3 rounded-[2rem] w-full lg:w-auto overflow-x-auto scrollbar-hide">
                   <button 
                     onClick={() => setFinanceSubTab('config')}
-                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'config' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-bold transition-all whitespace-nowrap ${financeSubTab === 'config' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     <Settings size={24} />
                     Cấu hình
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('data')}
-                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'data' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-bold transition-all whitespace-nowrap ${financeSubTab === 'data' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     <ClipboardList size={24} />
                     Dữ liệu
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('revenue')}
-                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'revenue' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-bold transition-all whitespace-nowrap ${financeSubTab === 'revenue' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     <BarChart3 size={24} />
                     Doanh thu
                   </button>
                   <button 
                     onClick={() => setFinanceSubTab('receipts')}
-                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-black transition-all whitespace-nowrap ${financeSubTab === 'receipts' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
+                    className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] text-lg font-bold transition-all whitespace-nowrap ${financeSubTab === 'receipts' ? 'bg-white text-indigo-600 shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     <FileText size={24} />
                     Phiếu thu chi
@@ -3355,7 +3513,7 @@ export default function App() {
               {financeSubTab === 'config' && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
                   <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
-                    <h3 className="text-3xl font-black text-slate-900 mb-10 font-display tracking-tight">Cấu hình tài chính</h3>
+                    <h3 className="text-3xl font-bold text-slate-900 mb-10 font-display tracking-tight">Cấu hình tài chính</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                       <InputGroup 
                         label="Kỳ báo cáo" 
@@ -3402,7 +3560,7 @@ export default function App() {
                           setIsFinanceConfigSaved(true);
                           alert('Đã lưu cấu hình tài chính!');
                         }}
-                        className="bg-indigo-600 text-white px-12 py-5 rounded-[1.5rem] text-2xl font-black flex items-center gap-4 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-100 active:scale-95"
+                        className="bg-indigo-600 text-white px-12 py-5 rounded-[1.5rem] text-2xl font-bold flex items-center gap-4 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-100 active:scale-95"
                       >
                         <Save size={32} />
                         Lưu cấu hình
@@ -3412,18 +3570,18 @@ export default function App() {
 
                   {isFinanceConfigSaved && (
                     <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
-                      <h3 className="text-3xl font-black text-slate-900 mb-10 font-display tracking-tight">Tải dữ liệu thu chi</h3>
+                      <h3 className="text-3xl font-bold text-slate-900 mb-10 font-display tracking-tight">Tải dữ liệu thu chi</h3>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
                         {/* Khu vực thu */}
                         <div className="p-10 bg-indigo-50/50 rounded-[2.5rem] border-2 border-indigo-100">
-                          <h4 className="text-2xl font-black text-indigo-900 mb-8 flex items-center gap-4">
+                          <h4 className="text-2xl font-bold text-indigo-900 mb-8 flex items-center gap-4">
                             <ArrowDownCircle size={32} className="text-indigo-600" />
                             Khu vực thu (Bảng chấm công)
                           </h4>
                           <label className="flex flex-col items-center justify-center gap-6 p-16 bg-white rounded-[2rem] border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer group shadow-sm">
                             <FileText className="text-indigo-300 group-hover:text-indigo-600" size={64} />
-                            <span className="text-xl font-black text-indigo-700">Tải bảng chấm công thu tiền</span>
+                            <span className="text-xl font-bold text-indigo-700">Tải bảng chấm công thu tiền</span>
                             <input 
                               type="file" 
                               className="hidden" 
@@ -3470,7 +3628,7 @@ export default function App() {
                                           registrationDate: new Date().toISOString().split('T')[0],
                                           fee: parseFloat(String(item.totalFee || '0').replace(/[^0-9]/g, ''))
                                         }));
-                                        setStudents(prev => [...prev, ...mapped]);
+                                        setFinanceStudents(prev => [...prev, ...mapped]);
                                         setUploadedFinanceFiles(prev => prev + 1);
                                         setIsRevenueFileUploaded(true);
                                         setFinanceSubTab('data');
@@ -3503,7 +3661,7 @@ export default function App() {
                                       }).filter(s => s !== null) as Student[];
                                       
                                       if (manualMapped.length > 0) {
-                                        setStudents(prev => [...prev, ...manualMapped]);
+                                        setFinanceStudents(prev => [...prev, ...manualMapped]);
                                         setUploadedFinanceFiles(prev => prev + 1);
                                         setIsRevenueFileUploaded(true);
                                         setFinanceSubTab('data');
@@ -3519,7 +3677,7 @@ export default function App() {
                             />
                           </label>
                           {isRevenueFileUploaded && (
-                            <div className="mt-4 flex items-center gap-3 text-indigo-600 text-sm font-black justify-center bg-indigo-50 py-3 rounded-2xl border border-indigo-100">
+                            <div className="mt-4 flex items-center gap-3 text-indigo-600 text-sm font-bold justify-center bg-indigo-50 py-3 rounded-2xl border border-indigo-100">
                               <CheckCircle size={18} />
                               Hệ thống đã nhận file phiếu thu
                             </div>
@@ -3528,13 +3686,13 @@ export default function App() {
 
                         {/* Khu vực chi */}
                         <div className="p-8 bg-emerald-50/50 rounded-[2rem] border border-emerald-100">
-                          <h4 className="text-xl font-black text-emerald-900 mb-6 flex items-center gap-3">
+                          <h4 className="text-xl font-bold text-emerald-900 mb-6 flex items-center gap-3">
                             <ArrowUpCircle size={24} className="text-emerald-600" />
                             Khu vực chi (Bảng chi tiền)
                           </h4>
                           <label className="flex flex-col items-center justify-center gap-4 p-12 bg-white rounded-3xl border-2 border-dashed border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all cursor-pointer group">
                             <FileDown className="text-emerald-300 group-hover:text-emerald-600" size={48} />
-                            <span className="text-lg font-black text-emerald-700">Tải bảng chi tiền</span>
+                            <span className="text-lg font-bold text-emerald-700">Tải bảng chi tiền</span>
                             <input 
                               type="file" 
                               className="hidden" 
@@ -3548,7 +3706,7 @@ export default function App() {
                             />
                           </label>
                           {isExpenditureFileUploaded && (
-                            <div className="mt-4 flex items-center gap-3 text-emerald-600 text-sm font-black justify-center bg-emerald-50 py-3 rounded-2xl border border-emerald-100">
+                            <div className="mt-4 flex items-center gap-3 text-emerald-600 text-sm font-bold justify-center bg-emerald-50 py-3 rounded-2xl border border-emerald-100">
                               <CheckCircle size={18} />
                               Hệ thống đã nhận file phiếu chi
                             </div>
@@ -3568,7 +3726,7 @@ export default function App() {
                                   alert('Đồng bộ dữ liệu thành công! Bạn có thể kiểm tra và chỉnh sửa dữ liệu tại tab "Dữ liệu" trước khi xuất sổ.');
                                 }, 1500);
                               }}
-                              className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl text-lg font-black shadow-xl hover:scale-105 transition-all"
+                              className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl text-lg font-bold shadow-xl hover:scale-105 transition-all"
                             >
                               <Sparkles size={24} />
                               Đồng bộ AI & Phân tích
@@ -3583,7 +3741,7 @@ export default function App() {
                                 setTimeout(() => setConfirmDeleteFinance(false), 5000);
                               }
                             }}
-                            className={`flex items-center gap-3 px-8 py-5 rounded-2xl text-lg font-black transition-all shadow-xl ${confirmDeleteFinance ? 'bg-rose-600 text-white' : 'bg-white text-rose-600 border border-rose-200 hover:bg-rose-50'}`}
+                            className={`flex items-center gap-3 px-8 py-5 rounded-2xl text-lg font-bold transition-all shadow-xl ${confirmDeleteFinance ? 'bg-rose-600 text-white' : 'bg-white text-rose-600 border border-rose-200 hover:bg-rose-50'}`}
                           >
                             <Trash2 size={24} />
                             {confirmDeleteFinance ? 'Đồng ý xóa dữ liệu' : 'Xóa dữ liệu tài chính'}
@@ -3592,7 +3750,7 @@ export default function App() {
                         
                         <button 
                           onClick={() => exportAttendanceAndFees()}
-                          className="bg-slate-800 text-white px-8 py-4 rounded-2xl text-lg font-black flex items-center gap-3 hover:bg-slate-900 transition-all shadow-xl"
+                          className="bg-slate-800 text-white px-8 py-4 rounded-2xl text-lg font-bold flex items-center gap-3 hover:bg-slate-900 transition-all shadow-xl"
                         >
                           <Download size={24} />
                           Tải mẫu bảng chấm công
@@ -3608,13 +3766,13 @@ export default function App() {
                   <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
                       <div>
-                        <h3 className="text-3xl font-black text-slate-800">Dữ liệu thu tiền học sinh</h3>
+                        <h3 className="text-3xl font-bold text-slate-800">Dữ liệu thu tiền học sinh</h3>
                         <p className="text-xl text-slate-600 font-bold">Kiểm tra và chỉnh sửa thông tin trước khi xuất báo cáo</p>
                       </div>
                       <div className="flex gap-4">
                         <button 
-                          onClick={() => addStudent({ name: '', grade: '', school: '', parentName: '', phone: '', subjects: '', registrationDate: new Date().toISOString().split('T')[0], fee: 0 })}
-                          className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-black text-lg flex items-center gap-3 hover:bg-indigo-100 transition-all shadow-sm"
+                          onClick={() => setFinanceStudents([...financeStudents, { id: crypto.randomUUID(), name: '', grade: '', school: '', parentName: '', phone: '', subjects: '', registrationDate: new Date().toISOString().split('T')[0], fee: 0 }])}
+                          className="bg-indigo-50 text-indigo-600 px-8 py-4 rounded-2xl font-bold text-lg flex items-center gap-3 hover:bg-indigo-100 transition-all shadow-sm"
                         >
                           <Plus size={24} /> Thêm học sinh
                         </button>
@@ -3625,29 +3783,29 @@ export default function App() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50">
-                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest w-24">TT</th>
-                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest">Họ và tên</th>
-                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest">Lớp / Địa chỉ</th>
-                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest">Số tiền thu</th>
-                            <th className="p-6 text-lg font-black text-slate-700 uppercase tracking-widest w-28">Thao tác</th>
+                            <th className="p-6 text-lg font-bold text-slate-700 uppercase tracking-widest w-24">TT</th>
+                            <th className="p-6 text-lg font-bold text-slate-700 uppercase tracking-widest">Họ và tên</th>
+                            <th className="p-6 text-lg font-bold text-slate-700 uppercase tracking-widest">Lớp / Địa chỉ</th>
+                            <th className="p-6 text-lg font-bold text-slate-700 uppercase tracking-widest">Số tiền thu</th>
+                            <th className="p-6 text-lg font-bold text-slate-700 uppercase tracking-widest w-28">Thao tác</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {students.length === 0 ? (
+                          {financeStudents.length === 0 ? (
                             <tr>
                               <td colSpan={5} className="p-20 text-center text-slate-400 italic text-lg">
                                 Chưa có dữ liệu học sinh. Vui lòng tải file tại tab "Cấu hình".
                               </td>
                             </tr>
                           ) : (
-                            students.map((s, idx) => (
+                            financeStudents.map((s, idx) => (
                               <tr key={s.id} className="hover:bg-slate-50/50 transition-all">
-                                <td className="p-6 text-xl font-bold text-slate-500">{idx + 1}</td>
+                                <td className="p-6 text-xl font-medium text-slate-500">{idx + 1}</td>
                                 <td className="p-4">
                                   <input 
                                     type="text" 
                                     value={s.name} 
-                                    onChange={(e) => updateStudent(s.id, { name: e.target.value })}
+                                    onChange={(e) => setFinanceStudents(prev => prev.map(item => item.id === s.id ? { ...item, name: e.target.value } : item))}
                                     className="w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-bold text-slate-800 transition-all"
                                     placeholder="Họ tên..."
                                   />
@@ -3656,7 +3814,7 @@ export default function App() {
                                   <input 
                                     type="text" 
                                     value={s.grade} 
-                                    onChange={(e) => updateStudent(s.id, { grade: e.target.value })}
+                                    onChange={(e) => setFinanceStudents(prev => prev.map(item => item.id === s.id ? { ...item, grade: e.target.value } : item))}
                                     className="w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-bold text-slate-800 transition-all"
                                     placeholder="Lớp..."
                                   />
@@ -3666,12 +3824,12 @@ export default function App() {
                                     <input 
                                       type="number" 
                                       value={s.fee} 
-                                      onChange={(e) => updateStudent(s.id, { fee: parseInt(e.target.value) || 0 })}
-                                      className={`w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-black transition-all ${s.fee === 0 ? 'text-rose-500' : 'text-indigo-600'}`}
+                                      onChange={(e) => setFinanceStudents(prev => prev.map(item => item.id === s.id ? { ...item, fee: parseInt(e.target.value) || 0 } : item))}
+                                      className={`w-full p-4 bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-300 focus:bg-white rounded-2xl text-xl font-semibold transition-all ${s.fee === 0 ? 'text-rose-500' : 'text-indigo-600'}`}
                                       placeholder="Số tiền..."
                                     />
                                     {s.fee === 0 && (
-                                      <span className="absolute -top-10 left-0 text-sm text-rose-500 font-black bg-rose-50 px-4 py-2 rounded-full border border-rose-100 whitespace-nowrap shadow-sm">
+                                      <span className="absolute -top-10 left-0 text-sm text-rose-500 font-bold bg-rose-50 px-4 py-2 rounded-full border border-rose-100 whitespace-nowrap shadow-sm">
                                         Sẽ không xuất sổ (0đ)
                                       </span>
                                     )}
@@ -3679,7 +3837,7 @@ export default function App() {
                                 </td>
                                 <td className="p-6">
                                   <button 
-                                    onClick={() => deleteStudent(s.id)}
+                                    onClick={() => setFinanceStudents(prev => prev.filter(item => item.id !== s.id))}
                                     className="p-4 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
                                   >
                                     <Trash2 size={24} />
@@ -3692,11 +3850,11 @@ export default function App() {
                       </table>
                     </div>
                     
-                    {students.length > 0 && (
+                    {financeStudents.length > 0 && (
                       <div className="mt-10 flex justify-end">
                         <button 
                           onClick={() => setFinanceSubTab('revenue')}
-                          className="bg-indigo-600 text-white px-10 py-4 rounded-2xl text-lg font-black flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100"
+                          className="bg-indigo-600 text-white px-10 py-4 rounded-2xl text-lg font-bold flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100"
                         >
                           Tiếp tục xuất sổ
                           <ArrowRight size={24} />
@@ -3712,12 +3870,12 @@ export default function App() {
                   <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
                       <div>
-                        <h3 className="text-3xl font-black text-slate-800">Sổ chi tiết doanh thu</h3>
+                        <h3 className="text-3xl font-bold text-slate-800">Sổ chi tiết doanh thu</h3>
                         <p className="text-xl text-slate-600 font-bold">Quản lý các khoản chi và xuất báo cáo doanh thu</p>
                       </div>
                       <button 
                         onClick={() => exportFinancialReports('revenue')}
-                        className="bg-emerald-600 text-white px-10 py-5 rounded-2xl text-lg font-black flex items-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+                        className="bg-emerald-600 text-white px-10 py-5 rounded-2xl text-lg font-bold flex items-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
                       >
                         <FileDown size={24} />
                         Xuất sổ doanh thu (Word)
@@ -3726,10 +3884,10 @@ export default function App() {
 
                     <div className="mb-10">
                       <div className="flex justify-between items-center mb-6">
-                        <h4 className="font-black text-slate-700 uppercase text-sm tracking-widest">Nội dung chi chi tiết</h4>
+                        <h4 className="font-bold text-slate-700 uppercase text-sm tracking-widest">Nội dung chi chi tiết</h4>
                         <button 
                           onClick={() => setExpenditures([...expenditures, { id: Date.now().toString(), date: financialConfig.voucherDate, description: '', amount: 0, recipient: '', recipientAddress: '' }])}
-                          className="text-indigo-600 text-lg font-black flex items-center gap-2 hover:underline"
+                          className="text-indigo-600 text-lg font-bold flex items-center gap-2 hover:underline"
                         >
                           <Plus size={20} /> Thêm nội dung chi
                         </button>
@@ -3870,7 +4028,7 @@ export default function App() {
 
                   <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-wrap gap-4 items-end">
                     <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
-                      <label className="text-[10px] font-black text-slate-700 uppercase">Tài khoản</label>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Tài khoản</label>
                       <input 
                         type="text" 
                         value={newAccount.username} 
@@ -3879,7 +4037,7 @@ export default function App() {
                       />
                     </div>
                     <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
-                      <label className="text-[10px] font-black text-slate-700 uppercase">Mật khẩu</label>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Mật khẩu</label>
                       <input 
                         type="text" 
                         value={newAccount.password} 
@@ -3888,7 +4046,7 @@ export default function App() {
                       />
                     </div>
                     <div className="flex flex-col gap-1 w-32">
-                      <label className="text-[10px] font-black text-slate-700 uppercase">Quyền</label>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Quyền</label>
                       <select 
                         value={newAccount.role} 
                         onChange={(e) => setNewAccount({...newAccount, role: e.target.value})}
@@ -3899,7 +4057,7 @@ export default function App() {
                       </select>
                     </div>
                     <div className="flex flex-col gap-1 w-32">
-                      <label className="text-[10px] font-black text-slate-700 uppercase">Thời hạn</label>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Thời hạn</label>
                       <input 
                         type="date" 
                         value={newAccount.expiry} 
@@ -3908,7 +4066,7 @@ export default function App() {
                       />
                     </div>
                     <div className="flex flex-col gap-1 w-20">
-                      <label className="text-[10px] font-black text-slate-700 uppercase">Số máy</label>
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Số máy</label>
                       <input 
                         type="number" 
                         value={newAccount.maxDevices} 
@@ -3940,13 +4098,13 @@ export default function App() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100">
-                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">STT</th>
-                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Tài khoản</th>
-                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Mật khẩu</th>
-                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Quyền</th>
-                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Thời hạn</th>
-                          <th className="text-left p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Số máy</th>
-                          <th className="text-right p-4 text-[10px] font-black text-slate-700 uppercase tracking-widest">Thao tác</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">STT</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Tài khoản</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Mật khẩu</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Quyền</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Thời hạn</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Số máy</th>
+                          <th className="text-right p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Thao tác</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -4018,7 +4176,7 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
       className={`flex items-center gap-4 p-5 rounded-2xl transition-all group ${active ? 'bg-indigo-50 text-indigo-700 shadow-md ring-1 ring-indigo-200' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-800'}`}
     >
       <span className={`${active ? 'text-indigo-600' : 'text-slate-600'}`}>{React.cloneElement(icon as React.ReactElement, { size: 28 })}</span>
-      <span className={`text-xl tracking-tight transition-all duration-300 group-hover:font-bold ${active ? 'font-black' : 'font-normal'}`}>{label}</span>
+      <span className={`text-xl tracking-tight transition-all duration-300 group-hover:font-bold ${active ? 'font-bold' : 'font-normal'}`}>{label}</span>
     </button>
   );
 }
@@ -4032,7 +4190,7 @@ function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onCl
       <div className={`p-3 rounded-2xl transition-all ${active ? 'bg-indigo-50 shadow-md ring-1 ring-indigo-100' : 'group-hover:bg-slate-50'}`}>
         {React.cloneElement(icon as React.ReactElement, { size: 32 })}
       </div>
-      <span className={`text-[13px] transition-all duration-300 group-hover:font-bold ${active ? 'font-black opacity-100' : 'font-normal opacity-70'}`}>{label}</span>
+      <span className={`text-[13px] transition-all duration-300 group-hover:font-bold ${active ? 'font-bold opacity-100' : 'font-normal opacity-70'}`}>{label}</span>
     </button>
   );
 }
@@ -4040,7 +4198,7 @@ function MobileNavLink({ active, onClick, icon, label }: { active: boolean, onCl
 function SectionHeader({ title, subtitle }: { title: string, subtitle: string }) {
   return (
     <div className="mb-8 sm:mb-12">
-      <h2 className="text-3xl sm:text-5xl font-black text-slate-900 font-sans leading-tight tracking-tighter">{title}</h2>
+      <h2 className="text-3xl sm:text-5xl font-bold text-slate-900 font-sans leading-tight tracking-tighter">{title}</h2>
       <p className="text-slate-500 text-lg sm:text-2xl font-medium mt-2 sm:mt-4 opacity-90">{subtitle}</p>
     </div>
   );
@@ -4057,9 +4215,9 @@ function Footer() {
               <div className="bg-indigo-600 p-3 rounded-xl shadow-lg">
                 <GraduationCap className="text-white w-8 h-8" />
               </div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">HOÀNG GIA</h2>
+              <h2 className="text-3xl font-bold text-slate-900 tracking-tighter uppercase">HOÀNG GIA</h2>
             </div>
-            <p className="text-indigo-600 font-black text-sm tracking-[0.2em] uppercase mt-2">TRAO CƠ HỘI - NHẬN NIỀM TIN</p>
+            <p className="text-indigo-600 font-bold text-sm tracking-[0.2em] uppercase mt-2">TRAO CƠ HỘI - NHẬN NIỀM TIN</p>
           </div>
           
           <p className="text-slate-500 text-lg leading-relaxed font-medium">
@@ -4092,7 +4250,7 @@ function Footer() {
 
         {/* Links Section 1 */}
         <div className="flex flex-col gap-8">
-          <h3 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">KHÁM PHÁ</h3>
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-[0.2em]">KHÁM PHÁ</h3>
           <ul className="flex flex-col gap-5">
             {['Về chúng tôi', 'Tính năng hệ thống', 'Bảng giá dịch vụ', 'Trung tâm hỗ trợ'].map((item) => (
               <li key={item}>
@@ -4104,7 +4262,7 @@ function Footer() {
 
         {/* Links Section 2 */}
         <div className="flex flex-col gap-8">
-          <h3 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">PHÁP LÝ</h3>
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-[0.2em]">PHÁP LÝ</h3>
           <ul className="flex flex-col gap-5">
             {['Điều khoản sử dụng', 'Chính sách bảo mật', 'Quy định vận hành'].map((item) => (
               <li key={item}>
@@ -4118,19 +4276,19 @@ function Footer() {
       {/* Bottom Bar */}
       <div className="max-w-7xl mx-auto pt-10 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
         <div className="flex flex-col gap-2 items-center md:items-start">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">© 2026 HOÀNG GIA EDUCATION. ALL RIGHTS RESERVED.</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">© 2026 HOÀNG GIA EDUCATION. ALL RIGHTS RESERVED.</p>
           <div className="flex items-center gap-4">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PHÁT TRIỂN BỞI: <span className="text-slate-900">ĐÀO MINH TÂM</span></span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">PHÁT TRIỂN BỞI: <span className="text-slate-900">ĐÀO MINH TÂM</span></span>
             <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-              <div className="w-4 h-4 bg-indigo-600 rounded-sm flex items-center justify-center text-[10px] text-white font-black">Z</div>
-              <span className="text-[10px] font-black text-indigo-600 tracking-widest">ZALO: 0366.000.555</span>
+              <div className="w-4 h-4 bg-indigo-600 rounded-sm flex items-center justify-center text-[10px] text-white font-bold">Z</div>
+              <span className="text-[10px] font-bold text-indigo-600 tracking-widest">ZALO: 0366.000.555</span>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></div>
-          <span className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em]">TRAO CƠ HỘI - NHẬN NIỀM TIN</span>
+          <span className="text-xs font-bold text-indigo-600 uppercase tracking-[0.2em]">TRAO CƠ HỘI - NHẬN NIỀM TIN</span>
         </div>
       </div>
     </footer>
@@ -4140,7 +4298,7 @@ function Footer() {
 function InputGroup({ label, value, onChange, placeholder, type = "text" }: { label: string, value: string, onChange: (v: string) => void, placeholder: string, type?: string }) {
   return (
     <div className="flex flex-col gap-3">
-      <label className="text-lg font-black transition-all text-slate-800 uppercase tracking-widest">{label}</label>
+      <label className="text-lg font-bold transition-all text-slate-800 uppercase tracking-widest">{label}</label>
       <input 
         type={type} 
         value={value} 
