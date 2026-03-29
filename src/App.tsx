@@ -58,7 +58,8 @@ import {
   ExternalLink,
   FileSpreadsheet,
   ChevronRight,
-  Code2
+  Code2,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -89,7 +90,9 @@ interface HKDConfig {
   address: string;
   owner: string;
   taxId: string;
-  scriptUrl?: string;
+  businessLocation?: string;
+  googleScriptUrl?: string;
+  spreadsheetId?: string;
 }
 
 interface Student {
@@ -113,6 +116,13 @@ interface UserAccount {
   expiry: string;
   maxDevices: number;
   registeredDevices?: string[];
+  businessName?: string;
+  ownerName?: string;
+  taxCode?: string;
+  address?: string;
+  businessLocation?: string;
+  googleScriptUrl?: string;
+  spreadsheetId?: string;
 }
 
 interface TableRow {
@@ -143,413 +153,7 @@ const SHIFT_OPTIONS = [
 
 const DAY_OPTIONS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
 
-const GOOGLE_SCRIPT_CODE = `/**
- * Google Apps Script for connecting React App to Google Sheets
- * This script handles 2-way synchronization (reading and writing) of data.
- */
-
-// Leave blank to use the spreadsheet where the script is bound, 
-// or paste the ID from your spreadsheet URL
-const SPREADSHEET_ID = ""; 
-
-function getSS() {
-  try {
-    if (SPREADSHEET_ID) {
-      return SpreadsheetApp.openById(SPREADSHEET_ID);
-    }
-    return SpreadsheetApp.getActiveSpreadsheet();
-  } catch (e) {
-    console.error("Error opening spreadsheet: " + e.message);
-    return null;
-  }
-}
-
-function doGet(e) {
-  const ss = getSS();
-  if (!ss) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Không thể mở Google Sheet. Vui lòng kiểm tra lại SPREADSHEET_ID hoặc quyền truy cập." 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // Check if e is defined (prevents error when running manually in Apps Script editor)
-  if (!e || !e.parameter) {
-    return ContentService.createTextOutput("Script is running correctly. Please access it via the Web App URL from the React application.").setMimeType(ContentService.MimeType.TEXT);
-  }
-
-  const action = e.parameter.action;
-
-  // Initialize sheets if they don't exist
-  initializeSheets(ss);
-
-  if (action === 'login') {
-    return handleLogin(ss, e.parameter.username, e.parameter.password);
-  }
-
-  // Default action: Fetch all data
-  return fetchData(ss);
-}
-
-function doPost(e) {
-  const ss = getSS();
-  if (!ss) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Không thể mở Google Sheet." 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const action = payload.action;
-
-    initializeSheets(ss);
-
-    if (action === 'updateAccounts') {
-      return updateAccounts(ss, payload.accounts);
-    } else if (action === 'updateProgram') {
-      return updateProgram(ss, payload.program, payload.targetGrades);
-    } else if (action === 'updateSubjects') {
-      return updateSubjects(ss, payload.subjects);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Hành động không hợp lệ." 
-    })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Lỗi xử lý dữ liệu: " + error.message 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function initializeSheets(ss) {
-  const sheets = [
-    { name: "Tài khoản đăng nhập", headers: ["ID", "Username", "Password", "Role", "Expiry", "MaxDevices", "RegisteredDevices"] },
-    { name: "Cấu hình", headers: ["Grade", "Subject", "SubSubject"] },
-    { name: "PPCT Khối 6", headers: ["Subject", "SubSubject", "Period", "Content"] },
-    { name: "PPCT Khối 7", headers: ["Subject", "SubSubject", "Period", "Content"] },
-    { name: "PPCT Khối 8", headers: ["Subject", "SubSubject", "Period", "Content"] },
-    { name: "PPCT Khối 9", headers: ["Subject", "SubSubject", "Period", "Content"] }
-  ];
-
-  sheets.forEach(s => {
-    let sheet = ss.getSheetByName(s.name);
-    if (!sheet) {
-      sheet = ss.insertSheet(s.name);
-      sheet.getRange(1, 1, 1, s.headers.length).setValues([s.headers]).setFontWeight("bold").setBackground("#f3f3f3");
-      
-      // Add a default admin account if it's the account sheet
-      if (s.name === "Tài khoản đăng nhập") {
-        sheet.appendRow(["admin-01", "admin", "123456", "Quản trị viên", "", "999", "[]"]);
-      }
-    }
-  });
-}
-
-function fetchData(ss) {
-  const data = {
-    accounts: getSheetData(ss, "Tài khoản đăng nhập"),
-    subjects: getSheetData(ss, "Cấu hình"),
-    program: {
-      "6": getSheetData(ss, "PPCT Khối 6"),
-      "7": getSheetData(ss, "PPCT Khối 7"),
-      "8": getSheetData(ss, "PPCT Khối 8"),
-      "9": getSheetData(ss, "PPCT Khối 9")
-    }
-  };
-
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function getSheetData(ss, sheetName) {
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return [];
-  
-  const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) return [];
-  
-  const headers = values[0];
-  const rows = values.slice(1);
-  
-  return rows.map(row => {
-    const obj = {};
-    headers.forEach((header, i) => {
-      let key = header.toLowerCase();
-      if (key === 'subsubject') key = 'subSubject';
-      if (key === 'maxdevices') key = 'maxDevices';
-      if (key === 'registereddevices') key = 'registeredDevices';
-      
-      let val = row[i];
-      if (key === 'registeredDevices' && typeof val === 'string') {
-        try { val = JSON.parse(val); } catch (e) { val = []; }
-      }
-      
-      obj[key] = val;
-    });
-    return obj;
-  });
-}
-
-function updateAccounts(ss, accounts) {
-  const sheet = ss.getSheetByName("Tài khoản đăng nhập");
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Sheet không tồn tại" })).setMimeType(ContentService.MimeType.JSON);
-  
-  sheet.clear();
-  const headers = ["ID", "Username", "Password", "Role", "Expiry", "MaxDevices", "RegisteredDevices"];
-  sheet.appendRow(headers);
-  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
-  
-  accounts.forEach(acc => {
-    sheet.appendRow([
-      acc.id,
-      acc.username,
-      acc.password,
-      acc.role,
-      acc.expiry,
-      acc.maxDevices,
-      JSON.stringify(acc.registeredDevices || [])
-    ]);
-  });
-  
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã cập nhật tài khoản" })).setMimeType(ContentService.MimeType.JSON);
-}
-
-function updateProgram(ss, program, targetGrades) {
-  const grades = targetGrades || [6, 7, 8, 9];
-  
-  grades.forEach(grade => {
-    const sheetName = "PPCT Khối " + grade;
-    const sheet = ss.getSheetByName(sheetName);
-    if (sheet) {
-      sheet.clear();
-      const headers = ["Subject", "SubSubject", "Period", "Content"];
-      sheet.appendRow(headers);
-      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
-      
-      const gradeData = program[grade] || [];
-      gradeData.forEach(item => {
-        sheet.appendRow([item.subject, item.subSubject, item.period, item.content]);
-      });
-    }
-  });
-  
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã cập nhật chương trình" })).setMimeType(ContentService.MimeType.JSON);
-}
-
-function updateSubjects(ss, subjects) {
-  const sheet = ss.getSheetByName("Cấu hình");
-  if (sheet) {
-    sheet.clear();
-    const headers = ["Grade", "Subject", "SubSubject"];
-    sheet.appendRow(headers);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
-    
-    subjects.forEach(s => {
-      sheet.appendRow([s.grade, s.subject, s.subSubject]);
-    });
-  }
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Đã cập nhật môn học" })).setMimeType(ContentService.MimeType.JSON);
-}
-
-function handleLogin(ss, username, password) {
-  const accounts = getSheetData(ss, "Tài khoản đăng nhập");
-  const user = accounts.find(u => String(u.username) === String(username) && String(u.password) === String(password));
-  
-  if (user) {
-    return ContentService.createTextOutput(JSON.stringify({ success: true, user: user })).setMimeType(ContentService.MimeType.JSON);
-  } else {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Sai tài khoản hoặc mật khẩu" })).setMimeType(ContentService.MimeType.JSON);
-  }
-}`;
-
-const USER_GOOGLE_SCRIPT_CODE = `/**
- * Google Apps Script for connecting React App to Google Sheets (User Version)
- * This script handles 2-way synchronization (reading and writing) of data.
- */
-
-const SPREADSHEET_ID = ""; 
-
-function getSS() {
-  try {
-    if (SPREADSHEET_ID) {
-      return SpreadsheetApp.openById(SPREADSHEET_ID);
-    }
-    return SpreadsheetApp.getActiveSpreadsheet();
-  } catch (e) {
-    console.error("Error opening spreadsheet: " + e.message);
-    return null;
-  }
-}
-
-function doGet(e) {
-  const ss = getSS();
-  if (!ss) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Không thể mở Google Sheet. Vui lòng kiểm tra lại SPREADSHEET_ID hoặc quyền truy cập." 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  if (!e || !e.parameter) {
-    return ContentService.createTextOutput("Script is running correctly. Please access it via the Web App URL from the React application.").setMimeType(ContentService.MimeType.TEXT);
-  }
-
-  const action = e.parameter.action;
-  initializeSheets(ss);
-  return fetchData(ss);
-}
-
-function doPost(e) {
-  const ss = getSS();
-  if (!ss) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Không thể mở Google Sheet." 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const action = payload.action;
-    initializeSheets(ss);
-
-    if (action === 'updateProgram') {
-      return updateProgram(ss, payload.program, payload.targetGrades);
-    } else if (action === 'updateSubjects') {
-      return updateSubjects(ss, payload.subjects);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Hành động không hợp lệ." 
-    })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      message: "Lỗi xử lý dữ liệu: " + error.message 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function initializeSheets(ss) {
-  // TỰ ĐỘNG XÓA sheet "Tài khoản đăng nhập" nếu tồn tại (Bảo mật khi người dùng copy từ bản của Admin)
-  const adminSheet = ss.getSheetByName("Tài khoản đăng nhập");
-  if (adminSheet) {
-    try {
-      ss.deleteSheet(adminSheet);
-    } catch (e) {
-      console.warn("Không thể xóa sheet tài khoản: " + e.message);
-    }
-  }
-
-  const sheets = [
-    { name: "Cấu hình", headers: ["Grade", "Subject", "SubSubject"] },
-    { name: "PPCT Khối 6", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
-    { name: "PPCT Khối 7", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
-    { name: "PPCT Khối 8", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] },
-    { name: "PPCT Khối 9", headers: ["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"] }
-  ];
-
-  sheets.forEach(s => {
-    let sheet = ss.getSheetByName(s.name);
-    if (!sheet) {
-      sheet = ss.insertSheet(s.name);
-      sheet.getRange(1, 1, 1, s.headers.length).setValues([s.headers]).setFontWeight("bold").setBackground("#f3f3f3");
-    }
-  });
-}
-
-function fetchData(ss) {
-  const data = {
-    subjects: getSheetData(ss, "Cấu hình"),
-    program: {
-      "6": getSheetData(ss, "PPCT Khối 6"),
-      "7": getSheetData(ss, "PPCT Khối 7"),
-      "8": getSheetData(ss, "PPCT Khối 8"),
-      "9": getSheetData(ss, "PPCT Khối 9")
-    }
-  };
-
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true,
-    subjects: data.subjects,
-    program: data.program,
-    accounts: [] 
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-
-function getSheetData(ss, sheetName) {
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return [];
-  
-  const values = sheet.getDataRange().getValues();
-  if (values.length <= 1) return [];
-  
-  const headers = values[0];
-  const rows = values.slice(1);
-  
-  return rows.map(row => {
-    const obj = {};
-    headers.forEach((header, i) => {
-      let key = header.toLowerCase();
-      if (key === 'subsubject') key = 'subSubject';
-      obj[key] = row[i];
-    });
-    return obj;
-  });
-}
-
-function updateSubjects(ss, subjects) {
-  let sheet = ss.getSheetByName("Cấu hình");
-  if (!sheet) {
-    sheet = ss.insertSheet("Cấu hình");
-    sheet.appendRow(["Grade", "Subject", "SubSubject"]);
-  }
-  sheet.clearContents();
-  sheet.appendRow(["Grade", "Subject", "SubSubject"]);
-  subjects.forEach(s => {
-    sheet.appendRow([s.grade, s.subject, s.subSubject]);
-  });
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
-}
-
-function updateProgram(ss, program, targetGrades) {
-  targetGrades.forEach(grade => {
-    const sheetName = "PPCT Khối " + grade;
-    let sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-      sheet.appendRow(["ID", "Day", "Shift", "Class", "Subject", "SubSubject", "Period", "Content", "Teacher", "Note"]);
-    }
-    
-    const oldData = sheet.getDataRange().getValues();
-    const headers = oldData[0];
-    
-    sheet.clearContents();
-    sheet.appendRow(headers);
-    
-    const newData = program[grade] || [];
-    newData.forEach(item => {
-      const row = headers.map(h => {
-        const key = h.toLowerCase();
-        if (key === 'subject') return item.subject || "";
-        if (key === 'subsubject') return item.subSubject || "";
-        if (key === 'period') return item.period || "";
-        if (key === 'content') return item.content || "";
-        return ""; 
-      });
-      sheet.appendRow(row);
-    });
-  });
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
-}
-`;
+const USER_GOOGLE_SCRIPT_CODE = `// Mã Google Apps Script đã được xóa theo yêu cầu.`;
 
 const numberToVietnameseWords = (num: number): string => {
   if (num === 0) return "Không đồng";
@@ -993,145 +597,12 @@ export default function App() {
     name: '',
     address: '',
     owner: '',
-    taxId: '',
-    scriptUrl: 'https://script.google.com/macros/s/AKfycbwdXqPI3viUroHevEJ5CzLk4dh3QfwstmJkB1PQA7alN-DbCSIdAPyXYSPhSd1Bf4ksmQ/exec'
+    taxId: ''
   });
 
   const [subjects, setSubjects] = useState(FIXED_SUBJECTS);
   const [teachingPrograms, setTeachingPrograms] = useState<Record<number, string>>({});
   const [khdhData, setKhdhData] = useState<Record<string, string>>(KHDH_DATA);
-
-  const fetchKHDHData = async () => {
-    if (!hkdConfig.scriptUrl) {
-      alert('Vui lòng cấu hình Google Script URL trong phần Cấu hình HKD!');
-      return;
-    }
-    try {
-      setIsAnalyzing(true);
-      const response = await fetch(hkdConfig.scriptUrl);
-      const data = await response.json();
-      
-      if (data.subjects && Array.isArray(data.subjects)) {
-        setSubjects(data.subjects);
-        localStorage.setItem('subjects_config', JSON.stringify(data.subjects));
-      }
-      
-      if (data.program) {
-        const mappedKhdhData: Record<string, string> = {};
-        [6, 7, 8, 9].forEach(grade => {
-          let gradeProgram = data.program[grade] || [];
-          
-          // Fix for potential JSON string format from older script versions
-          if (typeof gradeProgram === 'string') {
-            try {
-              gradeProgram = JSON.parse(gradeProgram);
-            } catch (e) {
-              gradeProgram = [];
-            }
-          }
-          
-          if (Array.isArray(gradeProgram)) {
-            gradeProgram.forEach((item: any) => {
-              // Key format: grade-subject-subSubject-period
-              const key = `${grade}-${item.subject}-${item.subSubject || ''}-${item.period}`;
-              mappedKhdhData[key] = item.content || '';
-            });
-          }
-        });
-        
-        setKhdhData(mappedKhdhData); 
-        localStorage.setItem('khdh_data', JSON.stringify(mappedKhdhData));
-      }
-
-      if (data.accounts && Array.isArray(data.accounts)) {
-        const syncedAccounts = data.accounts.map((acc: any, idx: number) => {
-          // Find existing account to preserve registeredDevices
-          const existing = userAccounts.find(u => 
-            String(u.username).trim().toLowerCase() === String(acc.username).trim().toLowerCase()
-          );
-          return {
-            ...acc,
-            id: acc.id || existing?.id || `acc_${idx}_${Date.now()}`,
-            username: String(acc.username || '').trim(),
-            password: String(acc.password || '').trim(),
-            role: acc.role || 'Giáo viên',
-            expiry: acc.expiry || '',
-            maxDevices: parseInt(acc.maxDevices) || 1,
-            registeredDevices: acc.registeredDevices || existing?.registeredDevices || []
-          };
-        });
-        
-        // Merge: Keep local accounts that are not in the synced list
-        const localOnly = userAccounts.filter(local => 
-          !syncedAccounts.some(synced => 
-            synced.username.toLowerCase() === local.username.toLowerCase()
-          )
-        );
-        
-        const finalAccounts = [...syncedAccounts, ...localOnly];
-        setUserAccounts(finalAccounts);
-        localStorage.setItem('user_accounts', JSON.stringify(finalAccounts));
-      }
-      
-      alert('Đã đồng bộ dữ liệu từ Google Sheets thành công!');
-    } catch (error) {
-      console.error('Fetch error:', error);
-      alert('Lỗi khi đồng bộ dữ liệu. Vui lòng kiểm tra lại Script URL và quyền truy cập.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const uploadToGoogleSheets = async (programData: Record<string, string>, targetGrades?: number[]) => {
-    if (!hkdConfig.scriptUrl) {
-      alert('Vui lòng cấu hình Google Script URL trong phần Cấu hình HKD!');
-      return;
-    }
-    try {
-      setIsAnalyzing(true);
-      
-      // Group data by grade for the payload
-      const programByGrade: Record<number, any[]> = {};
-      Object.entries(programData).forEach(([key, content]) => {
-        const parts = key.split('-');
-        if (parts.length >= 3) {
-          const grade = parseInt(parts[0]);
-          const subject = parts[1];
-          const subSubject = parts[2];
-          const period = parseInt(parts[parts.length - 1]);
-          
-          if (!programByGrade[grade]) programByGrade[grade] = [];
-          programByGrade[grade].push({
-            subject,
-            subSubject,
-            period,
-            content
-          });
-        }
-      });
-
-      const payload = {
-        action: 'updateProgram',
-        program: programByGrade,
-        targetGrades: targetGrades || [6, 7, 8, 9]
-      };
-
-      const response = await fetch(hkdConfig.scriptUrl, {
-        method: 'POST',
-        mode: 'no-cors', // Use no-cors if the script doesn't handle CORS, but it might limit response reading
-        body: JSON.stringify(payload)
-      });
-      
-      // Note: with no-cors we can't read the response, but the request is sent.
-      // For a better experience, the script should handle CORS.
-      alert('Yêu cầu cập nhật chương trình đã được gửi lên Google Sheets!');
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Lỗi khi tải dữ liệu lên. Vui lòng kiểm tra lại Script URL.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const getLastDayOfMonth = (monthStr: string) => {
     if (!monthStr) return `Ngày ... tháng ... năm ...`;
@@ -1157,7 +628,6 @@ export default function App() {
       return next;
     });
     
-    await uploadToGoogleSheets(newKhdhData, [grade]);
     setConfirmDeleteGrade(null);
     alert(`Đã xóa chương trình dạy khối ${grade} thành công!`);
   };
@@ -1684,7 +1154,7 @@ export default function App() {
                       }),
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
-                        children: [new TextRun({ text: "Chủ hộ kinh doanh", italics: true, size: 18 })],
+                        children: [new TextRun({ text: hkdConfig.owner, bold: true, size: 24 })],
                       }),
                     ],
                   }),
@@ -2074,10 +1544,10 @@ export default function App() {
   const [expenditures, setExpenditures] = useState<{id: string, date: string, description: string, amount: number, recipient: string, recipientAddress: string}[]>([]);
   const [financialConfig, setFinancialConfig] = useState({ 
     feePerSession: 100000, 
-    month: '03/2026',
+    month: `${(new Date().getMonth() + 1).toString().padStart(2, '0')}/${new Date().getFullYear()}`,
     receiptDate: new Date().toISOString().split('T')[0],
     voucherDate: new Date().toISOString().split('T')[0],
-    period: 'Tháng 03/2026',
+    period: `Tháng ${(new Date().getMonth() + 1).toString().padStart(2, '0')}/${new Date().getFullYear()}`,
     reporter: '',
     treasurer: ''
   });
@@ -2105,12 +1575,20 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('123456');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [newAccount, setNewAccount] = useState<Partial<UserAccount>>({
     username: '',
     password: '',
     role: 'Giáo viên',
     expiry: '',
-    maxDevices: 1
+    maxDevices: 1,
+    businessName: '',
+    ownerName: '',
+    taxCode: '',
+    address: '',
+    businessLocation: '',
+    googleScriptUrl: '',
+    spreadsheetId: ''
   });
 
   const activeStudentsCount = financeStudents.filter(s => (s.fee ?? financialConfig.feePerSession) > 0).length;
@@ -2159,7 +1637,14 @@ export default function App() {
             password: newAccount.password!.trim(),
             role: newAccount.role || 'Giáo viên',
             expiry: newAccount.expiry || '',
-            maxDevices: newAccount.maxDevices || 1
+            maxDevices: newAccount.maxDevices || 1,
+            businessName: newAccount.businessName || '',
+            ownerName: newAccount.ownerName || '',
+            taxCode: newAccount.taxCode || '',
+            address: newAccount.address || '',
+            businessLocation: newAccount.businessLocation || '',
+            googleScriptUrl: newAccount.googleScriptUrl || '',
+            spreadsheetId: newAccount.spreadsheetId || ''
           };
         }
         return acc;
@@ -2176,7 +1661,14 @@ export default function App() {
         role: newAccount.role || 'Giáo viên',
         expiry: newAccount.expiry || '',
         maxDevices: newAccount.maxDevices || 1,
-        registeredDevices: []
+        registeredDevices: [],
+        businessName: newAccount.businessName || '',
+        ownerName: newAccount.ownerName || '',
+        taxCode: newAccount.taxCode || '',
+        address: newAccount.address || '',
+        businessLocation: newAccount.businessLocation || '',
+        googleScriptUrl: newAccount.googleScriptUrl || '',
+        spreadsheetId: newAccount.spreadsheetId || ''
       };
       updatedAccounts = [...userAccounts, account];
       setUserAccounts(updatedAccounts);
@@ -2188,13 +1680,13 @@ export default function App() {
       password: '',
       role: 'Giáo viên',
       expiry: '',
-      maxDevices: 1
+      maxDevices: 1,
+      businessName: '',
+      ownerName: '',
+      taxCode: '',
+      address: '',
+      businessLocation: ''
     });
-
-    // Auto-sync to Google Sheets
-    if (hkdConfig.scriptUrl) {
-      saveAccountsToGoogleSheets(updatedAccounts);
-    }
   };
 
   const startEditAccount = (acc: UserAccount) => {
@@ -2204,7 +1696,14 @@ export default function App() {
       password: acc.password,
       role: acc.role,
       expiry: acc.expiry,
-      maxDevices: acc.maxDevices
+      maxDevices: acc.maxDevices,
+      businessName: acc.businessName || '',
+      ownerName: acc.ownerName || '',
+      taxCode: acc.taxCode || '',
+      address: acc.address || '',
+      businessLocation: acc.businessLocation || '',
+      googleScriptUrl: acc.googleScriptUrl || '',
+      spreadsheetId: acc.spreadsheetId || ''
     });
     // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2214,34 +1713,6 @@ export default function App() {
     if (confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) {
       const updatedAccounts = userAccounts.filter(acc => acc.id !== id);
       setUserAccounts(updatedAccounts);
-      // Auto-sync to Google Sheets
-      if (hkdConfig.scriptUrl) {
-        saveAccountsToGoogleSheets(updatedAccounts);
-      }
-    }
-  };
-
-  const saveAccountsToGoogleSheets = async (accountsToSave?: UserAccount[]) => {
-    if (!hkdConfig.scriptUrl) {
-      alert('Vui lòng cấu hình Google Script URL trong phần Cấu hình HKD!');
-      return;
-    }
-    try {
-      setIsAnalyzing(true);
-      const payload = {
-        action: 'updateAccounts',
-        accounts: accountsToSave || userAccounts
-      };
-      await fetch(hkdConfig.scriptUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(payload)
-      });
-      console.log('Syncing accounts to Google Sheets...');
-    } catch (error) {
-      console.error('Save accounts error:', error);
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -2263,19 +1734,17 @@ export default function App() {
     const savedSubjects = localStorage.getItem(subjectsKey);
     
     if (savedHKD) {
-      const config = JSON.parse(savedHKD);
-      if (!config.scriptUrl) {
-        config.scriptUrl = 'https://script.google.com/macros/s/AKfycbwdXqPI3viUroHevEJ5CzLk4dh3QfwstmJkB1PQA7alN-DbCSIdAPyXYSPhSd1Bf4ksmQ/exec';
-      }
-      setHkdConfig(config);
+      setHkdConfig(JSON.parse(savedHKD));
     } else if (activeUser && !activeIsAdmin) {
-      // For new users, reset to default or empty
+      // For regular users, prioritize account-level config set by admin
       setHkdConfig({
-        name: '',
-        address: '',
-        owner: '',
-        taxId: '',
-        scriptUrl: ''
+        name: activeUser.businessName || '',
+        address: activeUser.address || '',
+        owner: activeUser.ownerName || '',
+        taxId: activeUser.taxCode || '',
+        businessLocation: activeUser.businessLocation || '',
+        googleScriptUrl: activeUser.googleScriptUrl || '',
+        spreadsheetId: activeUser.spreadsheetId || ''
       });
     } else {
       // Fallback to global config for admin or if not logged in
@@ -2307,6 +1776,63 @@ export default function App() {
 
   const deleteSubjectRow = (index: number) => {
     setSubjects(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const syncFromGoogleSheets = async (type: 'all' | 'subjects' | 'program' | 'students' | 'finance') => {
+    if (!hkdConfig.googleScriptUrl) {
+      alert('Vui lòng cấu hình URL Google Apps Script trong phần Tùy chỉnh!');
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`${hkdConfig.googleScriptUrl}?action=fetchData`);
+      const result = await response.json();
+      
+      if (result.success) {
+        if (type === 'all' || type === 'subjects') {
+          if (result.subjects) {
+            setSubjects(result.subjects);
+            localStorage.setItem('subjects_config', JSON.stringify(result.subjects));
+          }
+        }
+        if (type === 'all' || type === 'program') {
+          if (result.program) {
+            const newKhdhData: Record<string, string> = {};
+            Object.entries(result.program).forEach(([grade, rows]: [string, any]) => {
+              rows.forEach((row: any) => {
+                if (row.subject && row.period) {
+                  const key = `${grade}-${row.subject}-${row.subsubject || row.subSubject || ''}-${row.period}`;
+                  newKhdhData[key] = row.content || '';
+                }
+              });
+            });
+            setKhdhData(newKhdhData);
+            localStorage.setItem('khdh_data', JSON.stringify(newKhdhData));
+          }
+        }
+        if (type === 'all' || type === 'students') {
+          if (result.students) {
+            setStudents(result.students);
+            localStorage.setItem('students', JSON.stringify(result.students));
+          }
+        }
+        if (type === 'all' || type === 'finance') {
+          if (result.finance) {
+            setFinanceStudents(result.finance);
+            localStorage.setItem('finance_students', JSON.stringify(result.finance));
+          }
+        }
+        alert('Đồng bộ dữ liệu từ Google Sheets thành công!');
+      } else {
+        alert('Lỗi đồng bộ: ' + result.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Lỗi kết nối với Google Sheets. Vui lòng kiểm tra lại URL Script!');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const syncToJournal = () => {
@@ -2488,7 +2014,7 @@ export default function App() {
           new TableCell({
             children: [
               new Paragraph({ children: [new TextRun({ text: dateStr, italics: true, size: 28 })], alignment: AlignmentType.CENTER }),
-              new Paragraph({ children: [new TextRun({ text: "Chủ hộ kinh doanh", bold: true, size: 28 })], alignment: AlignmentType.CENTER }),
+              new Paragraph({ children: [new TextRun({ text: hkdConfig.owner, bold: true, size: 28 })], alignment: AlignmentType.CENTER }),
               new Paragraph({ children: [new TextRun({ text: "(Ký tên, đóng dấu)", italics: true, size: 28 })], alignment: AlignmentType.CENTER })
             ],
             borders: {
@@ -2792,59 +2318,30 @@ export default function App() {
       return;
     }
 
-    // 2. Check synced accounts
+    // 2. Check accounts
     let user = userAccounts.find(u => {
       const uName = String(u.username || '').trim().toLowerCase();
       const uPass = String(u.password || '').trim();
       return uName === username.toLowerCase() && uPass === password;
     });
 
-    // 2.1 Fallback: Try to sync from Google Sheets if not found locally
-    if (!user && hkdConfig.scriptUrl) {
-      try {
-        const response = await fetch(hkdConfig.scriptUrl);
-        const data = await response.json();
-        if (data.accounts && Array.isArray(data.accounts)) {
-          const syncedAccounts = data.accounts.map((acc: any, idx: number) => {
-            const existing = userAccounts.find(u => 
-              String(u.username).trim().toLowerCase() === String(acc.username).trim().toLowerCase()
-            );
-            return {
-              ...acc,
-              id: acc.id || existing?.id || `acc_${idx}_${Date.now()}`,
-              username: String(acc.username || '').trim(),
-              password: String(acc.password || '').trim(),
-              role: acc.role || 'Giáo viên',
-              expiry: acc.expiry || '',
-              maxDevices: parseInt(acc.maxDevices) || 1,
-              registeredDevices: acc.registeredDevices || existing?.registeredDevices || []
-            };
-          });
-          
-          const localOnly = userAccounts.filter(local => 
-            !syncedAccounts.some(synced => 
-              synced.username.toLowerCase() === local.username.toLowerCase()
-            )
-          );
-          
-          const finalAccounts = [...syncedAccounts, ...localOnly];
-          setUserAccounts(finalAccounts);
-          localStorage.setItem('user_accounts', JSON.stringify(finalAccounts));
-          
-          user = finalAccounts.find(u => {
-            const uName = String(u.username || '').trim().toLowerCase();
-            const uPass = String(u.password || '').trim();
-            return uName === username.toLowerCase() && uPass === password;
-          });
-        }
-      } catch (error) {
-        console.error('Login sync error:', error);
-      }
-    }
-
     if (!user) {
       setLoginError('Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!');
       return;
+    }
+
+    // Clear user-specific data on login as requested
+    // "dữ liệu trong các tài khoản khi đăng nhập bị xóa bỏ hết"
+    if (user.role !== 'Quản trị viên') {
+      localStorage.removeItem(`schedule_data_${user.id}`);
+      localStorage.removeItem(`journal_data_${user.id}`);
+      localStorage.removeItem(`students_data_${user.id}`);
+      localStorage.removeItem(`finance_data_${user.id}`);
+      // Reset states if they were already loaded (though usually they are loaded on login)
+      setScheduleData({});
+      setJournalData([]);
+      setStudents([]);
+      setFinanceStudents([]);
     }
 
     // 3. Check expiry
@@ -2883,11 +2380,6 @@ export default function App() {
 
       setUserAccounts(updatedAccounts);
       localStorage.setItem('user_accounts', JSON.stringify(updatedAccounts));
-      
-      // Persist to Google Sheets
-      if (hkdConfig.scriptUrl) {
-        saveAccountsToGoogleSheets(updatedAccounts);
-      }
       
       // Use the updated user for the session
       user = updatedUser;
@@ -2954,32 +2446,10 @@ export default function App() {
               <LogIn size={28} />
               Đăng nhập hệ thống
             </button>
-            <button 
-              type="button"
-              onClick={fetchKHDHData}
-              className="mt-2 text-indigo-600 font-bold text-lg hover:underline flex items-center justify-center gap-2"
-            >
-              <RefreshCw size={20} />
-              Đồng bộ tài khoản từ hệ thống
-            </button>
-
             <div className="mt-6 pt-6 border-t border-slate-100">
-              <button 
-                type="button"
-                onClick={() => {
-                  const url = prompt('Nhập Google Script URL của bạn:', hkdConfig.scriptUrl);
-                  if (url !== null) {
-                    const newConfig = { ...hkdConfig, scriptUrl: url };
-                    setHkdConfig(newConfig);
-                    localStorage.setItem('hkd_config', JSON.stringify(newConfig));
-                    alert('Đã cập nhật Script URL!');
-                  }
-                }}
-                className="text-slate-400 hover:text-indigo-600 text-sm font-bold flex items-center justify-center gap-2 transition-colors w-full"
-              >
-                <Settings size={16} />
-                Cấu hình kết nối hệ thống
-              </button>
+              <p className="text-slate-400 text-xs text-center font-medium italic">
+                * Hệ thống quản lý giáo dục Hoàng Gia - Phiên bản 2026
+              </p>
             </div>
           </form>
         </motion.div>
@@ -3153,81 +2623,20 @@ export default function App() {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." />
-                    <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." />
+                    <InputGroup label="Tên Hộ Kinh Doanh" value={hkdConfig.name} onChange={v => setHkdConfig({...hkdConfig, name: v})} placeholder="Nhập tên cơ sở..." disabled={!isAdmin} />
+                    <InputGroup label="Chủ hộ" value={hkdConfig.owner} onChange={v => setHkdConfig({...hkdConfig, owner: v})} placeholder="Nhập tên chủ hộ..." disabled={!isAdmin} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputGroup label="Mã số thuế" value={hkdConfig.taxId} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, taxId: v})} placeholder="Nhập mã số thuế..." />
-                    <InputGroup label="Google Script URL" value={(isAdmin || currentUser) ? (hkdConfig.scriptUrl || '') : '********'} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, scriptUrl: v})} placeholder="https://script.google.com/macros/s/.../exec" />
+                    <InputGroup label="Mã số thuế" value={hkdConfig.taxId} onChange={v => setHkdConfig({...hkdConfig, taxId: v})} placeholder="Nhập mã số thuế..." disabled={!isAdmin} />
                   </div>
-                  <InputGroup label="Địa chỉ" value={hkdConfig.address} onChange={v => (isAdmin || currentUser) && setHkdConfig({...hkdConfig, address: v})} placeholder="Địa chỉ chi tiết..." />
-                  {(isAdmin || currentUser) && (
+                  <InputGroup label="Địa chỉ" value={hkdConfig.address} onChange={v => setHkdConfig({...hkdConfig, address: v})} placeholder="Địa chỉ chi tiết..." disabled={!isAdmin} />
+                  
+                  {isAdmin && (
                     <button onClick={saveConfig} className="mt-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 w-fit shadow-md">
                       <Save size={20} />
                       Lưu cấu hình
                     </button>
                   )}
-
-                  <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mt-6">
-                    <div className="flex flex-col lg:flex-row gap-8">
-                      <div className="flex-1">
-                        <h4 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                          <BookOpen size={20} /> Hướng dẫn kết nối Google Sheets
-                        </h4>
-                        <ul className="text-sm text-indigo-800 space-y-3 list-disc pl-5">
-                          <li>Mở tệp Google Sheets mẫu và <b>Tạo bản sao</b>.</li>
-                          <li>Trong bản sao mới, chọn <b>Tiện ích mở rộng</b> &gt; <b>Apps Script</b>.</li>
-                          <li>Dán mã Script tương ứng bên dưới vào trình soạn thảo.</li>
-                          <li>Nhấn <b>Triển khai</b> &gt; <b>Triển khai mới</b>.</li>
-                          <li>Chọn loại là <b>Ứng dụng web</b>, thiết lập "Người có quyền truy cập" là <b>Bất kỳ ai</b>.</li>
-                          <li>Sao chép <b>URL ứng dụng web</b> và dán vào ô "Google Script URL" ở trên.</li>
-                        </ul>
-                        
-                        <div className="mt-6 flex flex-wrap gap-4">
-                          <a 
-                            href="https://docs.google.com/spreadsheets/d/1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ/copy" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-sm"
-                          >
-                            <ExternalLink size={18} />
-                            Mở Google Sheet mẫu
-                          </a>
-                          <a 
-                            href="https://script.google.com/home" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-amber-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-amber-700 transition-all shadow-sm"
-                          >
-                            <ExternalLink size={18} />
-                            Mở Apps Script Editor
-                          </a>
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText(isAdmin ? GOOGLE_SCRIPT_CODE : USER_GOOGLE_SCRIPT_CODE);
-                              alert('Đã sao chép mã Google Script vào bộ nhớ tạm!');
-                            }}
-                            className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm"
-                          >
-                            <Copy size={18} />
-                            Sao chép mã Script ({isAdmin ? 'Admin' : 'User'})
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1 bg-slate-900 rounded-xl p-4 border border-slate-800 overflow-hidden flex flex-col">
-                        <div className="flex justify-between items-center mb-2 px-2">
-                          <span className="text-xs font-mono text-slate-400">code.gs ({isAdmin ? 'Admin' : 'User'})</span>
-                          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Google Apps Script</span>
-                        </div>
-                        <div className="relative flex-1 overflow-auto max-h-[300px] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                          <pre className="text-[11px] font-mono text-indigo-300 leading-relaxed p-2">
-                            {isAdmin ? GOOGLE_SCRIPT_CODE : USER_GOOGLE_SCRIPT_CODE}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </motion.div>
@@ -3239,22 +2648,6 @@ export default function App() {
                   <div className="flex justify-between items-center mb-4">
                     <SectionHeader title="Cấu hình Môn Học" subtitle="Danh mục môn học và phân môn theo khối lớp" />
                     <div className="flex gap-2">
-                      <button 
-                        onClick={fetchKHDHData}
-                        className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all"
-                      >
-                        <RefreshCw size={16} />
-                        Đồng bộ từ Sheet
-                      </button>
-                      {isAdmin && (
-                        <button 
-                          onClick={() => uploadToGoogleSheets(khdhData)}
-                          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all"
-                        >
-                          <Save size={16} />
-                          Lưu lên Sheet
-                        </button>
-                      )}
                       <button onClick={addSubjectRow} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all">
                         <Plus size={16} />
                         Thêm môn học
@@ -3326,50 +2719,86 @@ export default function App() {
           )}
 
           {activeTab === 'program' && (
-            <motion.div key="program" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl">
-              <div className="flex justify-between items-center mb-4">
-                <SectionHeader title="Chương trình dạy học" subtitle="Quản lý chương trình dạy học theo khối lớp" />
-                <div className="flex gap-2">
+            <motion.div key="program" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl space-y-8">
+              <div className="flex justify-between items-center">
+                <SectionHeader title="Chương trình dạy học" subtitle="Quản lý chương trình dạy học (PPCT) và đồng bộ" />
+              </div>
+
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200">
+                <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="p-5 bg-emerald-50 rounded-[2rem] text-emerald-600 shadow-sm border border-emerald-100">
+                      <RefreshCw size={40} />
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-bold text-slate-800">Đồng bộ dữ liệu</h4>
+                      <p className="text-lg text-slate-500 font-medium">Chuyển PPCT sang lịch báo giảng</p>
+                    </div>
+                  </div>
+
                   <button 
-                    onClick={fetchKHDHData} 
-                    className="bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-amber-700 transition-all shadow-lg shadow-amber-100"
+                    onClick={() => {
+                      const newSchedule: TableRow[] = [];
+                      
+                      subjects.forEach(sub => {
+                        const periods = Object.keys(khdhData).filter(key => key.startsWith(`${sub.grade}-${sub.subject}-${sub.subSubject}-`));
+                        periods.forEach(key => {
+                          const period = key.split('-').pop() || "";
+                          const content = khdhData[key];
+                          const row: TableRow = {
+                            id: crypto.randomUUID(),
+                            day: "",
+                            shift: "",
+                            class: "",
+                            subject: sub.subject,
+                            subSubject: sub.subSubject,
+                            period: period,
+                            content: content,
+                            teacher: currentUser?.username || "",
+                            note: ""
+                          };
+                          newSchedule.push({ ...row });
+                        });
+                      });
+                      
+                      setScheduleData(newSchedule);
+                      localStorage.setItem('schedule_data', JSON.stringify(newSchedule));
+                      alert('Đã đồng bộ PPCT sang Lịch báo giảng thành công!');
+                    }}
+                    className="bg-emerald-600 text-white px-8 py-5 rounded-[2rem] font-bold flex items-center justify-center gap-4 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 text-xl"
                   >
-                    <RefreshCw size={16} />
-                    Đồng bộ từ Sheet
+                    <Zap size={28} />
+                    Đồng bộ sang lịch báo giảng
                   </button>
-                  {isAdmin && (
-                    <button 
-                      onClick={() => uploadToGoogleSheets(khdhData)}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                    >
-                      <Save size={16} />
-                      Lưu lên Sheet
-                    </button>
-                  )}
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[6, 7, 8, 9].map(grade => (
-                  <div key={grade} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
-                          <BookOpen size={24} />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800">Khối lớp {grade}</h3>
+                  <div
+                    key={grade}
+                    className="p-8 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center"
+                  >
+                    <button
+                      onClick={() => setSelectedGradeForProgram(grade)}
+                      className="w-full group mb-6"
+                    >
+                      <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-4 group-hover:bg-indigo-100 transition-colors">
+                        <BookOpen size={40} className="text-indigo-600" />
                       </div>
-                      {teachingPrograms[grade] && (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold">Đã tải lên</span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <label className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-indigo-50 hover:border-indigo-100 transition-all group cursor-pointer">
-                        <Upload className="text-slate-400 group-hover:text-indigo-600" size={20} />
-                        <span className="text-xs font-bold text-slate-600 group-hover:text-indigo-700 text-center">Tải lên & Đồng bộ Sheets</span>
+                      <h4 className="text-2xl font-bold text-slate-800">Khối {grade}</h4>
+                      <p className="text-sm text-slate-500 font-bold mt-2">
+                        {Object.keys(khdhData).filter(k => k.startsWith(`${grade}-`)).length} tiết dạy
+                      </p>
+                    </button>
+
+                    <div className="w-full pt-6 border-t border-slate-100 flex flex-col gap-3">
+                      <label className="w-full bg-indigo-600 text-white px-4 py-4 rounded-2xl font-bold text-sm text-center hover:bg-indigo-700 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
+                        <Upload size={18} /> Tải lên PPCT
                         <input 
                           type="file" 
                           className="hidden" 
-                          accept=".xlsx, .xls, .csv"
+                          accept=".xlsx, .xls"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
@@ -3386,19 +2815,17 @@ export default function App() {
                                   const newSubjects = [...subjects];
                                   let subjectsChanged = false;
 
-                                  // Expecting columns: Grade, Subject, SubSubject, Period, Content
-                                  // Skip header
+                                  // Expecting columns: Subject, SubSubject, Period, Content
                                   for (let i = 1; i < data.length; i++) {
-                                    const [g, s, ss, p, c] = data[i];
-                                    if (g && s) {
-                                      const gradeStr = String(g);
+                                    const [s, ss, p, c] = data[i];
+                                    if (s) {
+                                      const gradeStr = String(grade);
                                       const subjectStr = String(s);
                                       const subSubjectStr = ss ? String(ss) : '';
                                       
                                       const key = `${gradeStr}-${subjectStr}-${subSubjectStr}-${p}`;
                                       newKhdhData[key] = String(c);
 
-                                      // Check if subject exists in list
                                       const exists = newSubjects.find(item => 
                                         item.grade === gradeStr && 
                                         item.subject === subjectStr && 
@@ -3416,16 +2843,11 @@ export default function App() {
                                     setSubjects(newSubjects);
                                     localStorage.setItem('subjects_config', JSON.stringify(newSubjects));
                                   }
-                                  setTeachingPrograms(prev => ({ ...prev, [grade]: file.name }));
                                   localStorage.setItem('khdh_data', JSON.stringify(newKhdhData));
-                                  
-                                  // Sync to Google Sheets
-                                  uploadToGoogleSheets(newKhdhData, [grade]);
-                                  
-                                  alert(`Đã tải lên và đồng bộ file: ${file.name} cho khối ${grade}`);
+                                  alert(`Đã tải lên PPCT Khối ${grade} thành công!`);
                                 } catch (err) {
                                   console.error(err);
-                                  alert('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng.');
+                                  alert('Lỗi khi đọc file Excel.');
                                 }
                               };
                               reader.readAsBinaryString(file);
@@ -3435,62 +2857,68 @@ export default function App() {
                       </label>
                       <button 
                         onClick={() => {
-                          if (!teachingPrograms[grade]) {
-                            alert('Vui lòng tải lên chương trình trước khi lưu!');
-                            return;
-                          }
-                          uploadToGoogleSheets(khdhData, [grade]);
+                          const wsData = [
+                            ["Môn học", "Phân môn", "Tiết", "Nội dung"],
+                            ["Toán", "Đại số", "1", `Nội dung mẫu Khối ${grade}`],
+                            ["Ngữ văn", "", "1", `Nội dung mẫu Khối ${grade}`]
+                          ];
+                          const ws = XLSX.utils.aoa_to_sheet(wsData);
+                          const wb = XLSX.utils.book_new();
+                          XLSX.utils.book_append_sheet(wb, ws, `PPCT_Khoi_${grade}`);
+                          XLSX.writeFile(wb, `Mau_PPCT_Khoi_${grade}.xlsx`);
                         }}
-                        className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-100 transition-all group"
+                        className="text-xs text-indigo-600 hover:underline font-bold flex items-center justify-center gap-1"
                       >
-                        <Save className="text-slate-400 group-hover:text-emerald-600" size={20} />
-                        <span className="text-xs font-bold text-slate-600 group-hover:text-emerald-700 text-center">Đồng bộ Sheets thủ công</span>
+                        <FileDown size={14} /> Tải file mẫu Khối {grade}
                       </button>
-                      <button 
-                        onClick={() => setSelectedGradeForProgram(grade)}
-                        className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-amber-50 hover:border-amber-100 transition-all group"
-                      >
-                        <Eye className="text-slate-400 group-hover:text-amber-600" size={20} />
-                        <span className="text-xs font-bold text-slate-600 group-hover:text-amber-700 text-center">Xem chi tiết</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (confirmDeleteGrade === grade) {
-                            deleteProgramForGrade(grade);
-                          } else {
-                            setConfirmDeleteGrade(grade);
-                            setTimeout(() => setConfirmDeleteGrade(null), 5000);
-                          }
-                        }}
-                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all group ${confirmDeleteGrade === grade ? 'bg-rose-600 border-rose-600 text-white' : 'bg-slate-50 border-slate-100 hover:bg-rose-50 hover:border-rose-100'}`}
-                      >
-                        <Trash2 className={confirmDeleteGrade === grade ? 'text-white' : 'text-slate-400 group-hover:text-rose-600'} size={20} />
-                        <span className={`text-xs font-bold ${confirmDeleteGrade === grade ? 'text-white' : 'text-slate-600 group-hover:text-rose-700'} text-center`}>
-                          {confirmDeleteGrade === grade ? 'Đồng ý xóa' : 'Xóa chương trình'}
-                        </span>
-                      </button>
-                    </div>
-
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Chương trình đã đồng bộ</p>
-                      <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        {Object.entries(khdhData)
-                          .filter(([key]) => key.startsWith(`${grade}-`))
-                          .map(([key, content]) => {
-                            const parts = key.split('-');
-                            return (
-                              <div key={key} className="text-[10px] py-1 border-b border-slate-50 last:border-none">
-                                <span className="font-bold text-indigo-600">Tiết {parts[3]} ({parts[1]}):</span> {content}
-                              </div>
-                            );
-                          })}
-                        {Object.keys(khdhData).filter(k => k.startsWith(`${grade}-`)).length === 0 && (
-                          <p className="text-[10px] text-slate-400 italic">Chưa có dữ liệu chương trình cho khối này.</p>
-                        )}
-                      </div>
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200">
+                <h3 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+                  <ClipboardList size={28} className="text-indigo-600" />
+                  Dữ liệu PPCT hiện có
+                </h3>
+                <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="grid grid-cols-1 gap-4">
+                    {Object.entries(khdhData).length > 0 ? (
+                      Object.entries(khdhData).map(([key, content]) => {
+                        const [grade, subject, subSubject, period] = key.split('-');
+                        return (
+                          <div key={key} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group">
+                            <div className="flex items-center gap-4">
+                              <span className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-bold text-indigo-600 shadow-sm">
+                                {grade}
+                              </span>
+                              <div>
+                                <p className="font-bold text-slate-800">{subject} {subSubject && `(${subSubject})`}</p>
+                                <p className="text-xs text-slate-500">Tiết {period}: {content}</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const newData = { ...khdhData };
+                                delete newData[key];
+                                setKhdhData(newData);
+                                localStorage.setItem('khdh_data', JSON.stringify(newData));
+                              }}
+                              className="p-2 text-slate-300 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-12 text-slate-400">
+                        <BookOpen size={48} className="mx-auto mb-4 opacity-20" />
+                        <p>Chưa có dữ liệu PPCT. Vui lòng tải lên file Excel.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Detail View Modal */}
@@ -3526,7 +2954,6 @@ export default function App() {
                           .sort((a, b) => {
                             const partsA = a[0].split('-');
                             const partsB = b[0].split('-');
-                            // Sort by subject, then sub-subject, then period
                             if (partsA[1] !== partsB[1]) return partsA[1].localeCompare(partsB[1]);
                             if (partsA[2] !== partsB[2]) return partsA[2].localeCompare(partsB[2]);
                             return parseInt(partsA[3]) - parseInt(partsB[3]);
@@ -3584,10 +3011,6 @@ export default function App() {
                 <div className="flex gap-2 mb-8">
                   {activeTab === 'schedule' && (
                     <>
-                      <button onClick={syncToJournal} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
-                        <RefreshCw size={16} />
-                        Đồng bộ sang Sổ đầu bài
-                      </button>
                       <button onClick={() => addScheduleRow('schedule')} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
                         <Plus size={16} />
                         Thêm dòng mới
@@ -3858,6 +3281,8 @@ export default function App() {
                       </div>
                     </button>
 
+                    {/* Removed Sync from Sheets button */}
+
                     <button 
                       onClick={() => {
                         if (confirmDelete) {
@@ -3981,54 +3406,9 @@ export default function App() {
               
               {financeSubTab === 'config' && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
-                  {/* Admin Tools Links */}
-                  <div className="bg-indigo-50 p-8 rounded-[2.5rem] border-2 border-indigo-100 shadow-sm">
-                    <h4 className="text-xl font-bold text-indigo-900 mb-6 flex items-center gap-3">
-                      <ExternalLink size={24} className="text-indigo-600" /> Công cụ quản trị hệ thống (Master)
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <a 
-                        href="https://docs.google.com/spreadsheets/d/1g6Bgw96E9eVCbG3jQQ0nS7HGRqpuSy-UusR3kdvU8RQ/edit?gid=0#gid=0" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="flex items-center gap-4 p-6 bg-white rounded-3xl border border-indigo-100 hover:shadow-xl transition-all group"
-                      >
-                        <div className="p-4 bg-emerald-100 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform shadow-sm">
-                          <FileSpreadsheet size={32} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 text-lg">Mở Google Sheet Master</p>
-                          <p className="text-sm text-slate-500 font-medium">Quản lý cấu hình & PPCT gốc</p>
-                        </div>
-                        <ChevronRight className="ml-auto text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                      </a>
-                      <a 
-                        href="https://script.google.com/macros/s/AKfycbxIwNihW13uszAAhz6EC1aUt7WwHMp5OcigEdI8NqeBRqfdoGPW-jUsVXlje5-HDreEhw/exec" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="flex items-center gap-4 p-6 bg-white rounded-3xl border border-indigo-100 hover:shadow-xl transition-all group"
-                      >
-                        <div className="p-4 bg-amber-100 rounded-2xl text-amber-600 group-hover:scale-110 transition-transform shadow-sm">
-                          <Code2 size={32} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 text-lg">Mở Google Script Admin</p>
-                          <p className="text-sm text-slate-500 font-medium">Quản lý API & Đồng bộ tài khoản</p>
-                        </div>
-                        <ChevronRight className="ml-auto text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                      </a>
-                    </div>
-                  </div>
-
                   <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
                     <h3 className="text-3xl font-bold text-slate-900 mb-10 font-sans tracking-tight">Cấu hình tài chính</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
-                      <InputGroup 
-                        label="Kỳ báo cáo" 
-                        value={financialConfig.period} 
-                        onChange={v => setFinancialConfig({...financialConfig, period: v})} 
-                        placeholder="Ví dụ: Tháng 03/2026" 
-                      />
                       <InputGroup 
                         label="Ngày xuất phiếu thu" 
                         value={financialConfig.receiptDate} 
@@ -4036,9 +3416,6 @@ export default function App() {
                         placeholder="YYYY-MM-DD" 
                         type="date"
                       />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                       <InputGroup 
                         label="Ngày xuất phiếu chi" 
                         value={financialConfig.voucherDate} 
@@ -4046,6 +3423,7 @@ export default function App() {
                         placeholder="YYYY-MM-DD" 
                         type="date"
                       />
+                    </div>
                       <div className="grid grid-cols-2 gap-8">
                         <InputGroup 
                           label="Người lập biểu" 
@@ -4074,9 +3452,8 @@ export default function App() {
                         Lưu cấu hình
                       </button>
                     </div>
-                  </div>
 
-                  {isFinanceConfigSaved && (
+                    {isFinanceConfigSaved && (
                     <div className="bg-white p-12 rounded-[3rem] shadow-sm border-2 border-slate-100">
                       <h3 className="text-3xl font-bold text-slate-900 mb-10 font-sans tracking-tight">Tải dữ liệu thu chi</h3>
                       
@@ -4510,27 +3887,6 @@ export default function App() {
                   <div className="flex justify-between items-center">
                     <div>
                       <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Danh sách tài khoản</h4>
-                      <p className="text-[10px] text-slate-400 italic">
-                        * Cấu hình các cột trong sheet "Accounts": Thứ tự, Tài khoản, Mật khẩu, Quyền, Thời hạn, Số máy
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={fetchKHDHData}
-                        disabled={isAnalyzing}
-                        className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-200 transition-all disabled:opacity-50"
-                      >
-                        {isAnalyzing ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                        Đồng bộ
-                      </button>
-                      <button 
-                        onClick={saveAccountsToGoogleSheets}
-                        disabled={isAnalyzing}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-lg shadow-indigo-100"
-                      >
-                        <Save size={16} />
-                        Lưu lên Sheet
-                      </button>
                     </div>
                   </div>
 
@@ -4582,22 +3938,91 @@ export default function App() {
                         className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
                       />
                     </div>
+                  </div>
+
+                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Tên Hộ kinh doanh</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.businessName} 
+                        onChange={(e) => setNewAccount({...newAccount, businessName: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                        placeholder="Tên cơ sở..."
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Chủ hộ</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.ownerName} 
+                        onChange={(e) => setNewAccount({...newAccount, ownerName: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                        placeholder="Tên chủ hộ..."
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Mã số thuế</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.taxCode} 
+                        onChange={(e) => setNewAccount({...newAccount, taxCode: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                        placeholder="MST..."
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Địa chỉ</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.address} 
+                        onChange={(e) => setNewAccount({...newAccount, address: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                        placeholder="Địa chỉ..."
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-700 uppercase">Nơi kinh doanh</label>
+                      <input 
+                        type="text" 
+                        value={newAccount.businessLocation} 
+                        onChange={(e) => setNewAccount({...newAccount, businessLocation: e.target.value})}
+                        className="p-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                        placeholder="Nơi kinh doanh..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
                     <button 
                       onClick={addAccount}
-                      className={`${editingAccount ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-4 py-2 rounded-lg transition-all shadow-md flex items-center gap-2`}
+                      className={`${editingAccount ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white px-6 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 font-bold`}
                     >
                       {editingAccount ? <Save size={20} /> : <Plus size={20} />}
-                      {editingAccount ? 'Cập nhật' : 'Thêm mới'}
+                      {editingAccount ? 'Cập nhật tài khoản' : 'Tạo tài khoản mới'}
                     </button>
                     {editingAccount && (
                       <button 
                         onClick={() => {
                           setEditingAccount(null);
-                          setNewAccount({ username: '', password: '', role: 'Giáo viên', expiry: '', maxDevices: 1 });
+                          setNewAccount({ 
+                            username: '', 
+                            password: '', 
+                            role: 'Giáo viên', 
+                            expiry: '', 
+                            maxDevices: 1,
+                            businessName: '',
+                            ownerName: '',
+                            taxCode: '',
+                            address: '',
+                            businessLocation: '',
+                            googleScriptUrl: '',
+                            spreadsheetId: ''
+                          });
                         }}
-                        className="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-300 transition-all"
+                        className="bg-slate-200 text-slate-600 px-6 py-2.5 rounded-xl hover:bg-slate-300 transition-all font-bold"
                       >
-                        Hủy
+                        Hủy chỉnh sửa
                       </button>
                     )}
                   </div>
@@ -4611,6 +4036,7 @@ export default function App() {
                           <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Mật khẩu</th>
                           <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Quyền</th>
                           <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Thời hạn</th>
+                          <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Thông tin HKD</th>
                           <th className="text-left p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Số máy</th>
                           <th className="text-right p-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest">Thao tác</th>
                         </tr>
@@ -4637,6 +4063,16 @@ export default function App() {
                                     {acc.expiry}
                                   </span>
                                 ) : 'Vĩnh viễn'}
+                              </td>
+                              <td className="p-4 text-sm text-slate-500 max-w-[200px]">
+                                {acc.businessName ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    <p className="font-bold text-slate-700 truncate">{acc.businessName}</p>
+                                    <p className="text-[10px] text-slate-400 truncate">{acc.ownerName} - {acc.taxCode}</p>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-300 italic">Chưa cấu hình</span>
+                                )}
                               </td>
                               <td className="p-4 text-sm text-slate-500">
                                 {((acc as any).registeredDevices?.length || 0)} / {acc.maxDevices}
@@ -4803,16 +4239,17 @@ function Footer() {
   );
 }
 
-function InputGroup({ label, value, onChange, placeholder, type = "text" }: { label: string, value: string, onChange: (v: string) => void, placeholder: string, type?: string }) {
+function InputGroup({ label, value, onChange, placeholder, type = "text", disabled = false }: { label: string, value: string, onChange: (v: string) => void, placeholder: string, type?: string, disabled?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <label className="text-lg font-bold transition-all text-slate-800 uppercase tracking-widest">{label}</label>
       <input 
         type={type} 
         value={value} 
-        onChange={e => onChange(e.target.value)}
+        onChange={e => !disabled && onChange(e.target.value)}
         placeholder={placeholder}
-        className="p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-slate-900 font-normal text-xl placeholder:text-slate-400 placeholder:font-normal"
+        disabled={disabled}
+        className={`p-5 bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-slate-900 font-normal text-xl placeholder:text-slate-400 placeholder:font-normal ${disabled ? 'opacity-70 cursor-not-allowed bg-slate-100' : ''}`}
       />
     </div>
   );
